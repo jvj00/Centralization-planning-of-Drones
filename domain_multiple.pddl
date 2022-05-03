@@ -40,7 +40,7 @@
   )
 
   (:durative-action rotate_45
-    :parameters (?d - drone ?dir_from - direction ?dir_to - direction ?rp - point)
+    :parameters (?d - drone ?rp - point ?dir_from - direction ?dir_to - direction)
     :duration (= ?duration 0.1)
     :condition  (and
             (at start (and

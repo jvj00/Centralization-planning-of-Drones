@@ -1,9 +1,12 @@
 #include <iostream>
 #include <string.h>
+#include <math.h>
 
 #define MAX_HEIGHT 100
 #define MAX_WIDTH 100
 #define MAX_VISIT_POINTS 100
+#define MAX_LEVELS 5
+#define LEVEL_DST 30
 
 using namespace std;
 
@@ -22,23 +25,25 @@ bool is_number(const string& s)
 
 int main(int argc, char** argv)
 {
-    int h, w, ntarget=0;
-    double cost;
-    string points[MAX_HEIGHT][MAX_WIDTH];
+    int h, w, l, ntarget=0;
+    double dst_pts, dst_lvl;
+    string points[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH];
     string out_l="",out_d="", out_list_p="";
     string d1_pos="", d2_pos="", d1_dir="", d2_dir="", targets[MAX_VISIT_POINTS], directions[MAX_VISIT_POINTS];
 
     //PARSING ARGUMENTS
-    if(argc>=10 && argc%2==0 && is_number_int(argv[1]) && is_number_int(argv[2]) && is_number(argv[3]))
+    if(argc>=12 && argc%2==0 && is_number_int(argv[1]) && is_number_int(argv[2]) && is_number_int(argv[3]) && is_number(argv[4]) && is_number(argv[5]))
     {
         h = atoi(argv[1]);
         w = atoi(argv[2]);
-        cost = stod(argv[3]);
-        d1_pos = argv[4];
-        d2_pos = argv[5];
-        d1_dir = argv[6];
-        d2_dir = argv[7];
-        for(int i=8;i<argc && i<MAX_VISIT_POINTS*2+8;i+=2)
+        l = atoi(argv[3]);
+        dst_pts = stod(argv[4]);
+        dst_lvl = stod(argv[5]);
+        d1_pos = argv[6];
+        d2_pos = argv[7];
+        d1_dir = argv[8];
+        d2_dir = argv[9];
+        for(int i=10;i<argc && i<MAX_VISIT_POINTS*2+10;i+=2)
         {
             targets[ntarget]=argv[i];
             directions[ntarget]=argv[i+1];
@@ -48,7 +53,7 @@ int main(int argc, char** argv)
     else if(argc==2 && (!((string)argv[1]).compare("--help") || !((string)argv[1]).compare("-h")))
     {
         cout << "This tool generate a 2D map of points, giving height and width in points as input." << endl;
-        cout << "Usage: ./map_tool <height> <width> <distance_pts> <drone1_position> <drone2_position> <drone1_direction> <drone2_direction> <target1 direction1 target2 direction2 ...>" << endl;
+        cout << "Usage: ./map_tool <height> <width> <levels> <distance_pts> <distance_lvl> <drone1_position> <drone2_position> <drone1_direction> <drone2_direction> <target1 direction1 target2 direction2 ...>" << endl;
         exit(0);
     }
     else
@@ -58,58 +63,157 @@ int main(int argc, char** argv)
     }
 
     //MAIN PROGRAM
-    for(int i=0;i<h;i++)
-        for(int j=0;j<w;j++)
-            points[i][j] = "p" + to_string((i*w)+j);
+    for(int i=0;i<l;i++)
+        for(int j=0;j<h;j++)
+            for(int k=0;k<w;k++)
+                points[i][j][k] = "p" + to_string((i*w*h)+(j*w)+k);
 
-    for(int i=0;i<h;i++)
-        for(int j=0;j<w;j++)
-        {
-            //points
-            out_list_p += points[i][j] + " ";
+    for(int i=0;i<l;i++)
+        for(int j=0;j<h;j++)
+            for(int k=0;k<w;k++)
+            {
+                //points
+                out_list_p += points[i][j][k] + " ";
 
-            //links && distances
-            if(i>0 && j>0) //nw
-            {
-                out_l += "    (link " + points[i][j] + " " + points[i-1][j-1] + ")\n";
-                out_d += "    (= (distance " + points[i][j] + " " + points[i-1][j-1] + ") " + to_string(cost * 1.4142) + ")\n";
-            } 
-            if(i>0) //nn
-            {
-                out_l += "    (link " + points[i][j] + " " + points[i-1][j] + ")\n";
-                out_d += "    (= (distance " + points[i][j] + " " + points[i-1][j] + ") " + to_string(cost * 1.0) + ")\n";
-            } 
-            if(i>0 && j<w-1) //ne
-            {
-                out_l += "    (link " + points[i][j] + " " + points[i-1][j+1] + ")\n";
-                out_d += "    (= (distance " + points[i][j] + " " + points[i-1][j+1] + ") " + to_string(cost * 1.4142) + ")\n";
-            } 
-            if(j<w-1) //ee
-            {
-                out_l += "    (link " + points[i][j] + " " + points[i][j+1] + ")\n";
-                out_d += "    (= (distance " + points[i][j] + " " + points[i][j+1] + ") " + to_string(cost * 1.0) + ")\n";
-            } 
-            if(i<h-1 && j<w-1) //se
-            {
-                out_l += "    (link " + points[i][j] + " " + points[i+1][j+1] + ")\n";
-                out_d += "    (= (distance " + points[i][j] + " " + points[i+1][j+1] + ") " + to_string(cost * 1.4142) + ")\n";
-            } 
-            if(i<h-1) //ss
-            {
-                out_l += "    (link " + points[i][j] + " " + points[i+1][j] + ")\n";
-                out_d += "    (= (distance " + points[i][j] + " " + points[i+1][j] + ") " + to_string(cost * 1.0) + ")\n";
-            } 
-            if(i<h-1 && j>0) //sw
-            {
-                out_l += "    (link " + points[i][j] + " " + points[i+1][j-1] + ")\n";
-                out_d += "    (= (distance " + points[i][j] + " " + points[i+1][j-1] + ") " + to_string(cost * 1.4142) + ")\n";
-            } 
-            if(j>0) //ww
-            {
-                out_l += "    (link " + points[i][j] + " " + points[i][j-1] + ")\n";
-                out_d += "    (= (distance " + points[i][j] + " " + points[i][j-1] + ") " + to_string(cost * 1.0) + ")\n";
-            } 
-        }            
+                //links && distances in the level
+                if(j>0 && k>0) //nw
+                {
+                    out_l += "    (link " + points[i][j][k] + " " + points[i][j-1][k-1] + ")\n";
+                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j-1][k-1] + ") " + to_string(dst_pts * 1.4142) + ")\n";
+                } 
+                if(j>0) //nn
+                {
+                    out_l += "    (link " + points[i][j][k] + " " + points[i][j-1][k] + ")\n";
+                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j-1][k] + ") " + to_string(dst_pts * 1.0) + ")\n";
+                } 
+                if(j>0 && k<w-1) //ne
+                {
+                    out_l += "    (link " + points[i][j][k] + " " + points[i][j-1][k+1] + ")\n";
+                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j-1][k+1] + ") " + to_string(dst_pts * 1.4142) + ")\n";
+                } 
+                if(k<w-1) //ee
+                {
+                    out_l += "    (link " + points[i][j][k] + " " + points[i][j][k+1] + ")\n";
+                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j][k+1] + ") " + to_string(dst_pts * 1.0) + ")\n";
+                } 
+                if(j<h-1 && k<w-1) //se
+                {
+                    out_l += "    (link " + points[i][j][k] + " " + points[i][j+1][k+1] + ")\n";
+                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j+1][k+1] + ") " + to_string(dst_pts * 1.4142) + ")\n";
+                } 
+                if(j<h-1) //ss
+                {
+                    out_l += "    (link " + points[i][j][k] + " " + points[i][j+1][k] + ")\n";
+                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j+1][k] + ") " + to_string(dst_pts * 1.0) + ")\n";
+                } 
+                if(j<h-1 && k>0) //sw
+                {
+                    out_l += "    (link " + points[i][j][k] + " " + points[i][j+1][k-1] + ")\n";
+                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j+1][k-1] + ") " + to_string(dst_pts * 1.4142) + ")\n";
+                } 
+                if(k>0) //ww
+                {
+                    out_l += "    (link " + points[i][j][k] + " " + points[i][j][k-1] + ")\n";
+                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j][k-1] + ") " + to_string(dst_pts * 1.0) + ")\n";
+                } 
+
+                //links && distances under level
+                if(i>0)
+                {
+                    if(j>0 && k>0) //nw
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j-1][k-1] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j-1][k-1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    } 
+                    if(j>0) //nn
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j-1][k] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j-1][k] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    } 
+                    if(j>0 && k<w-1) //ne
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j-1][k+1] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j-1][k+1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    } 
+                    if(k<w-1) //ee
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j][k+1] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j][k+1] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    } 
+                    if(j<h-1 && k<w-1) //se
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j+1][k+1] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j+1][k+1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    } 
+                    if(j<h-1) //ss
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j+1][k] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j+1][k] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    } 
+                    if(j<h-1 && k>0) //sw
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j+1][k-1] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j+1][k-1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    } 
+                    if(k>0) //ww
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j][k-1] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j][k-1] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    }
+                    //centered
+                    out_l += "    (link " + points[i][j][k] + " " + points[i-1][j][k] + ")\n";
+                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j][k] + ") " + to_string(dst_lvl) + ")\n";
+                }
+
+                //links && distances above level
+                if(i<l-1)
+                {
+                    if(j>0 && k>0) //nw
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j-1][k-1] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j-1][k-1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    } 
+                    if(j>0) //nn
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j-1][k] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j-1][k] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    } 
+                    if(j>0 && k<w-1) //ne
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j-1][k+1] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j-1][k+1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    } 
+                    if(k<w-1) //ee
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j][k+1] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j][k+1] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    } 
+                    if(j<h-1 && k<w-1) //se
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j+1][k+1] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j+1][k+1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    } 
+                    if(j<h-1) //ss
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j+1][k] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j+1][k] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    } 
+                    if(j<h-1 && k>0) //sw
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j+1][k-1] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j+1][k-1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    } 
+                    if(k>0) //ww
+                    {
+                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j][k-1] + ")\n";
+                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j][k-1] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                    }
+                    //centered
+                    out_l += "    (link " + points[i][j][k] + " " + points[i+1][j][k] + ")\n";
+                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j][k] + ") " + to_string(dst_lvl) + ")\n";
+                }
+
+            }           
 
     cout << "(define (problem planning_map)""\n"
             "  (:domain planner)""\n"
@@ -163,7 +267,7 @@ int main(int argc, char** argv)
     
     cout << "  )""\n"
             "  (:metric minimize""\n"
-            "    (+ (total-time) (cost))""\n"
+            "    (cost)""\n"
             "  )""\n"
             ")""\n";
 
