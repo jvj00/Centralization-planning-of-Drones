@@ -3,12 +3,32 @@
   (:objects
      p0 p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15  - point
      d1 d2 - drone
+     dir0 dir45 dir90 dir135 dir180 dir225 dir270 dir315 - direction
   )
   
   (:init
     (= (cost) 0)
     (drone_pos d1 p0)
     (drone_pos d2 p15)
+    (drone_dir d1 dir0)
+    (drone_dir d2 dir0)
+
+    (rotation dir0 dir45)
+    (rotation dir45 dir0)
+    (rotation dir45 dir90)
+    (rotation dir90 dir45)
+    (rotation dir90 dir135)
+    (rotation dir135 dir90)
+    (rotation dir135 dir180)
+    (rotation dir180 dir135)
+    (rotation dir180 dir225)
+    (rotation dir225 dir180)
+    (rotation dir225 dir270)
+    (rotation dir270 dir225)
+    (rotation dir270 dir315)
+    (rotation dir315 dir270)
+    (rotation dir315 dir0)
+    (rotation dir0 dir315)
     (link p0 p1)
     (link p0 p5)
     (link p0 p4)
@@ -179,9 +199,9 @@
     (= (distance p15 p14) 1.000000)
   )
   (:goal
-    (and (visited p7) (visited p8) )
+    (and (picture p8 dir270) (picture p9 dir180) )
   )
   (:metric minimize
-   (cost)
+    (+ (total-time) (cost))
   )
 )
