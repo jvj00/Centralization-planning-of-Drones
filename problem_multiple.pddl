@@ -29,6 +29,10 @@
     (rotation dir315 dir270)
     (rotation dir315 dir0)
     (rotation dir0 dir315)
+
+    (rotation_point p7)
+    (rotation_point p12)
+
     (link p0 p1)
     (link p0 p5)
     (link p0 p4)
@@ -199,7 +203,10 @@
     (= (distance p15 p14) 1.000000)
   )
   (:goal
-    (and (picture p8 dir270) (picture p9 dir180) )
+    (and 
+      (picture p7 dir90)
+      (picture p12 dir180)
+    )
   )
   (:metric minimize
     (+ (total-time) (cost))

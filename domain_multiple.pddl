@@ -8,6 +8,7 @@
   (:predicates
     (link ?p1 - point ?p2 - point)
     (rotation ?dir_from - direction ?dir_to - direction)
+    (rotation_point ?p - point)
     (drone_pos ?d - drone ?p - point)
     (drone_dir ?d - drone ?dir - direction)
     (picture ?p - point ?dir - direction)
@@ -39,10 +40,12 @@
   )
 
   (:durative-action rotate_45
-    :parameters (?d - drone ?dir_from - direction ?dir_to - direction)
+    :parameters (?d - drone ?dir_from - direction ?dir_to - direction ?rp - point)
     :duration (= ?duration 0.1)
     :condition  (and
             (at start (and
+              (drone_pos ?d ?rp)
+              (rotation_point ?rp)
               (drone_dir ?d ?dir_from)
               (rotation ?dir_from ?dir_to)
             ))

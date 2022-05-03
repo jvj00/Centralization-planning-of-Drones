@@ -26,26 +26,29 @@ int main(int argc, char** argv)
     double cost;
     string points[MAX_HEIGHT][MAX_WIDTH];
     string out_l="",out_d="", out_list_p="";
-    string d1_pos="", d2_pos="", targets[MAX_VISIT_POINTS];
+    string d1_pos="", d2_pos="", d1_dir="", d2_dir="", targets[MAX_VISIT_POINTS], directions[MAX_VISIT_POINTS];
 
     //PARSING ARGUMENTS
-    if(argc>=7 && is_number_int(argv[1]) && is_number_int(argv[2]) && is_number(argv[3]))
+    if(argc>=10 && argc%2==0 && is_number_int(argv[1]) && is_number_int(argv[2]) && is_number(argv[3]))
     {
         h = atoi(argv[1]);
         w = atoi(argv[2]);
         cost = stod(argv[3]);
         d1_pos = argv[4];
         d2_pos = argv[5];
-        for(int i=6;i<argc && i<MAX_VISIT_POINTS+6;i++)
+        d1_dir = argv[6];
+        d2_dir = argv[7];
+        for(int i=8;i<argc && i<MAX_VISIT_POINTS*2+8;i+=2)
         {
             targets[ntarget]=argv[i];
+            directions[ntarget]=argv[i+1];
             ntarget++;
         }
     }
     else if(argc==2 && (!((string)argv[1]).compare("--help") || !((string)argv[1]).compare("-h")))
     {
         cout << "This tool generate a 2D map of points, giving height and width in points as input." << endl;
-        cout << "Usage: ./map_tool <height> <width> <distance_pts> <drone1_position> <drone2_position> <target1 target2 ...>" << endl;
+        cout << "Usage: ./map_tool <height> <width> <distance_pts> <drone1_position> <drone2_position> <drone1_direction> <drone2_direction> <target1 direction1 target2 direction2 ...>" << endl;
         exit(0);
     }
     else
@@ -113,31 +116,54 @@ int main(int argc, char** argv)
             "  (:objects""\n"
             "     " << out_list_p << " - point\n"
             "     d1 d2 - drone\n"
+            "     dir0 dir45 dir90 dir135 dir180 dir225 dir270 dir315 - direction\n"
             "  )""\n"
             "  ""\n"
             "  (:init""\n"
             "    (= (cost) 0)""\n"
             "    (drone_pos d1 " << d1_pos << ")""\n"
-            "    (drone_pos d2 " << d2_pos << ")""\n";
-        
+            "    (drone_pos d2 " << d2_pos << ")""\n"
+            "    (drone_dir d1 " << d2_dir << ")""\n"
+            "    (drone_dir d2 " << d2_dir << ")""\n\n"
+            "    (rotation dir0 dir45)""\n"
+            "    (rotation dir45 dir0)""\n"
+            "    (rotation dir45 dir90)""\n"
+            "    (rotation dir90 dir45)""\n"
+            "    (rotation dir90 dir135)""\n"
+            "    (rotation dir135 dir90)""\n"
+            "    (rotation dir135 dir180)""\n"
+            "    (rotation dir180 dir135)""\n"
+            "    (rotation dir180 dir225)""\n"
+            "    (rotation dir225 dir180)""\n"
+            "    (rotation dir225 dir270)""\n"
+            "    (rotation dir270 dir225)""\n"
+            "    (rotation dir270 dir315)""\n"
+            "    (rotation dir315 dir270)""\n"
+            "    (rotation dir315 dir0)""\n"
+            "    (rotation dir0 dir315)""\n\n";
+
+    for(int i=0; i<ntarget; i++)
+            cout << "    (rotation_point " << targets[i] << ")\n";
+    cout << "\n";
+      
     cout << out_l << out_d;
 
     cout << "  )""\n"
             "  (:goal""\n";
 
     if(ntarget==1)
-        cout << "    (visited "<< targets[0] <<")\n";
+        cout << "    (picture "<< targets[0] << " " << directions[0] << ")\n";
     else
     {
-        cout << "    (and ";
+        cout << "    (and \n";
         for(int i=0; i<ntarget; i++)
-            cout << "(visited " << targets[i] << ") ";
-        cout << ")\n";
+            cout << "      (picture " << targets[i] << " " << directions[i] << ")\n";
+        cout << "    )\n";
     }
     
     cout << "  )""\n"
             "  (:metric minimize""\n"
-            "   (cost)""\n"
+            "    (+ (total-time) (cost))""\n"
             "  )""\n"
             ")""\n";
 
