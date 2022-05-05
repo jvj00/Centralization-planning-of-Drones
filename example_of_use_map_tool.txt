@@ -1,0 +1,1 @@
+./map_tool --pddl ex/problem.pddl --json ex/file.json 10 10 3 10 20 15 p0 dir0 p40 dir45 p100 dir45 p200 dir90
