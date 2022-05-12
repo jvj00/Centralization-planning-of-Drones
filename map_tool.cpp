@@ -10,8 +10,6 @@ using namespace std;
 #define MAX_WIDTH 100
 #define MAX_VISIT_POINTS 100
 #define MAX_LEVELS 5
-const string POSSIBLE_DIRS[] = {"dir0", "dir45",  "dir90", "dir135", "dir180", "dir225", "dir270", "dir315"};
-#define DIRECTION_RANGE_DEGREE 45
 
 #define X 0
 #define Y 1
@@ -45,17 +43,13 @@ bool is_number(const string& s)
     while (it != s.end() && (isdigit(*it) || *it=='.')) ++it;
     return !s.empty() && it == s.end();
 }
-int round_int(double val)
-{
-    return val-int(val)<0.5 ? int(val) : int(val+1);
-}
 void common_error()
 {
     cerr << "Wrong usage of this tool. Type --help or -h to see the guide" << endl; 
     exit(1);
 }
 
-void compute_drones_posdir(int l, int h, int w, string points[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH], double points_coord[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH][3], double* d1_coord, double* d2_coord, string* d1_pos, string* d1_dir, string* d2_pos, string* d2_dir)
+void compute_drones_pos(int l, int h, int w, string points[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH], double points_coord[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH][3], double* d1_coord, double* d2_coord, string* d1_pos, string* d2_pos)
 {
     double d1_min_value=DBL_MAX, d2_min_value=DBL_MAX;
     for(int i=0;i<l;i++)
@@ -75,10 +69,8 @@ void compute_drones_posdir(int l, int h, int w, string points[MAX_LEVELS][MAX_HE
                     *d2_pos=points[i][j][k];
                 }
             }
-    *d1_dir=POSSIBLE_DIRS[round_int((int(d1_coord[DIR])%360)/double(DIRECTION_RANGE_DEGREE))];
-    *d2_dir=POSSIBLE_DIRS[round_int((int(d2_coord[DIR])%360)/double(DIRECTION_RANGE_DEGREE))];
 }
-void compute_targets_posdir(int l, int h, int w, int ntarget, string points[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH], double points_coord[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH][3], double targets_coord[MAX_VISIT_POINTS][4], string targets[MAX_VISIT_POINTS], string directions[MAX_VISIT_POINTS])
+void compute_targets_pos(int l, int h, int w, int ntarget, string points[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH], double points_coord[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH][3], double targets_coord[MAX_VISIT_POINTS][3], string targets[MAX_VISIT_POINTS])
 {
     double targets_min_value[MAX_VISIT_POINTS];
     for(int i=0;i<MAX_VISIT_POINTS;i++)
@@ -86,7 +78,6 @@ void compute_targets_posdir(int l, int h, int w, int ntarget, string points[MAX_
 
     for(int n=0; n<ntarget; n++)
     {
-        directions[n] = POSSIBLE_DIRS[round_int((int(targets_coord[n][DIR])%360)/double(DIRECTION_RANGE_DEGREE))];
         for(int i=0;i<l;i++)
             for(int j=0;j<h;j++)
                 for(int k=0;k<w;k++)
@@ -112,8 +103,8 @@ int main(int argc, char** argv)
     string points[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH];
     double points_coord[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH][3];
     string out_l="",out_d="", out_list_p="", out_coordinates="";
-    string d1_pos="", d2_pos="", d1_dir="", d2_dir="", targets[MAX_VISIT_POINTS], directions[MAX_VISIT_POINTS];
-    double d1_coord[4], d2_coord[4], targets_coord[MAX_VISIT_POINTS][4];
+    string d1_pos="", d2_pos="", targets[MAX_VISIT_POINTS];
+    double d1_coord[3], d2_coord[3], targets_coord[MAX_VISIT_POINTS][3];
 
     //PARSING ARGUMENTS
     //OUTPUTS
@@ -139,7 +130,7 @@ int main(int argc, char** argv)
         if(!json_file) common_error();
     }
     //PARAMETERS
-    if(argc>=18+index_arguments && (argc-(18+index_arguments))%4==0 && is_number_int(argv[index_arguments]) && is_number_int(argv[1+index_arguments]) && is_number_int(argv[2+index_arguments]) && is_number(argv[3+index_arguments]) && is_number(argv[4+index_arguments]) && is_number(argv[5+index_arguments]) && is_number(argv[6+index_arguments]) && is_number(argv[7+index_arguments]) && is_number(argv[8+index_arguments]) && is_number(argv[9+index_arguments]) && is_number(argv[10+index_arguments]) && is_number(argv[11+index_arguments]) && is_number(argv[12+index_arguments]) && is_number(argv[13+index_arguments]))
+    if(argc>=15+index_arguments && (argc-(15+index_arguments))%3==0 && is_number_int(argv[index_arguments]) && is_number_int(argv[1+index_arguments]) && is_number_int(argv[2+index_arguments]) && is_number(argv[3+index_arguments]) && is_number(argv[4+index_arguments]) && is_number(argv[5+index_arguments]) && is_number(argv[6+index_arguments]) && is_number(argv[7+index_arguments]) && is_number(argv[8+index_arguments]) && is_number(argv[9+index_arguments]) && is_number(argv[10+index_arguments]) && is_number(argv[11+index_arguments]))
     {
         h = atoi(argv[index_arguments++]);
         w = atoi(argv[index_arguments++]);
@@ -150,18 +141,15 @@ int main(int argc, char** argv)
         d1_coord[X] = stod(argv[index_arguments++]);
         d1_coord[Y] = stod(argv[index_arguments++]);
         d1_coord[Z] = stod(argv[index_arguments++]);
-        d1_coord[DIR] = stod(argv[index_arguments++]);
         d2_coord[X] = stod(argv[index_arguments++]);
         d2_coord[Y] = stod(argv[index_arguments++]);
         d2_coord[Z] = stod(argv[index_arguments++]);
-        d2_coord[DIR] = stod(argv[index_arguments++]);
-        for(int i=index_arguments;i<argc && i<MAX_VISIT_POINTS*4+index_arguments;i+=4)
+        for(int i=index_arguments;i<argc && i<MAX_VISIT_POINTS*3+index_arguments;i+=3)
         {
-            if(!is_number(argv[i]) || !is_number(argv[i+1]) || !is_number(argv[i+2]) || !is_number(argv[i+3])) common_error();
+            if(!is_number(argv[i]) || !is_number(argv[i+1]) || !is_number(argv[i+2])) common_error();
             targets_coord[ntarget][X]=stod(argv[i]);
             targets_coord[ntarget][Y]=stod(argv[i+1]);
             targets_coord[ntarget][Z]=stod(argv[i+2]);
-            targets_coord[ntarget][DIR]=stod(argv[i+3]);
             ntarget++;
         }
     }
@@ -169,7 +157,7 @@ int main(int argc, char** argv)
     else if(argc==2 && (!((string)argv[1]).compare("--help") || !((string)argv[1]).compare("-h")))
     {
         cout << "This tool generate a 2D map of points, giving height and width in points as input." << endl << endl;
-        cout << "Usage: ./map_tool [options] <height> <width> <levels> <distance_pts> <distance_lvl> <lowest_lvl> <d1_x> <d1_y> <d1_z> <d1_dir> <d2_x> <d2_y> <d2_z> <d2_dir> <t1_x t1_y t1_z t1_dir, t2_x t2_y t2_z t2_dir ...>" << endl;
+        cout << "Usage: ./map_tool [options] <height> <width> <levels> <distance_pts> <distance_lvl> <lowest_lvl> <d1_x> <d1_y> <d1_z> <d2_x> <d2_y> <d2_z> <t1_x t1_y t1_z, t2_x t2_y t2_z ...>" << endl;
         cout << endl;
         cout << "Parameters:" << endl;
         cout << "   <height(pts)> height 2D (y) in points of the map" << endl;
@@ -178,9 +166,9 @@ int main(int argc, char** argv)
         cout << "   <distance_pts> distance in meters between points of the same level" << endl;
         cout << "   <distance_lvl> distance in meters between levels" << endl;
         cout << "   <lowest_lvl> heigth in meters of the lowest level" << endl;
-        cout << "   <d1_x> <d1_y> <d1_z> <d1_dir> position (x,y,z) and direction (degree) of the first drone. E.g.: 22.1 23.4 10.0 45.5" << endl;
-        cout << "   <d2_x> <d2_y> <d2_z> <d2_dir> same, but with second drone" << endl;
-        cout << "   <t1_x t1_y t1_z t1_dir, t2_x t2_y t2_z t2_dir ...> list of target position (x,y,z) and direction of the planning. E.g.: 30.1 40.2 25.1 230.5" << endl;
+        cout << "   <d1_x> <d1_y> <d1_z> position (x,y,z) of the first drone. E.g.: 22.1 23.4 10.0" << endl;
+        cout << "   <d2_x> <d2_y> <d2_z> same, but with second drone" << endl;
+        cout << "   <t1_x t1_y t1_z, t2_x t2_y t2_z ...> list of target position (x,y,z) of the planning. E.g.: 30.1 40.2 25.1" << endl;
         cout << endl;
         cout << "Options:" << endl;
         cout << "   --pddl <path_to_out_file>          generates a pddl problem as output" << endl;
@@ -209,8 +197,8 @@ int main(int argc, char** argv)
                     out_coordinates += ",";
                 
             }
-    compute_drones_posdir(l,h,w, points, points_coord, d1_coord, d2_coord, &d1_pos, &d1_dir, &d2_pos, &d2_dir);
-    compute_targets_posdir(l,h,w, ntarget, points, points_coord, targets_coord, targets, directions);    
+    compute_drones_pos(l,h,w, points, points_coord, d1_coord, d2_coord, &d1_pos, &d2_pos);
+    compute_targets_pos(l,h,w, ntarget, points, points_coord, targets_coord, targets);    
 
     //COMPUTES LINKS & DISTANCES
     for(int i=0;i<l;i++)
@@ -378,29 +366,7 @@ int main(int argc, char** argv)
                 "  (:init""\n"
                 "    (= (cost) 0)""\n"
                 "    (drone_pos d1 " << d1_pos << ")""\n"
-                "    (drone_pos d2 " << d2_pos << ")""\n"
-                "    (drone_dir d1 " << d1_dir << ")""\n"
-                "    (drone_dir d2 " << d2_dir << ")""\n\n"
-                "    (rotation dir0 dir45)""\n"
-                "    (rotation dir45 dir0)""\n"
-                "    (rotation dir45 dir90)""\n"
-                "    (rotation dir90 dir45)""\n"
-                "    (rotation dir90 dir135)""\n"
-                "    (rotation dir135 dir90)""\n"
-                "    (rotation dir135 dir180)""\n"
-                "    (rotation dir180 dir135)""\n"
-                "    (rotation dir180 dir225)""\n"
-                "    (rotation dir225 dir180)""\n"
-                "    (rotation dir225 dir270)""\n"
-                "    (rotation dir270 dir225)""\n"
-                "    (rotation dir270 dir315)""\n"
-                "    (rotation dir315 dir270)""\n"
-                "    (rotation dir315 dir0)""\n"
-                "    (rotation dir0 dir315)""\n\n";
-
-        for(int i=0; i<ntarget; i++)
-                pddl_out << "    (rotation_point " << targets[i] << ")\n";
-        pddl_out << "\n";
+                "    (drone_pos d2 " << d2_pos << ")""\n\n";
         
         pddl_out << out_l << out_d;
 
@@ -408,12 +374,12 @@ int main(int argc, char** argv)
                 "  (:goal""\n";
 
         if(ntarget==1)
-            pddl_out << "    (picture "<< targets[0] << " " << directions[0] << ")\n";
+            pddl_out << "    (picture "<< targets[0] << ")\n";
         else
         {
             pddl_out << "    (and \n";
             for(int i=0; i<ntarget; i++)
-                pddl_out << "      (picture " << targets[i] << " " << directions[i] << ")\n";
+                pddl_out << "      (picture " << targets[i] << ")\n";
             pddl_out << "    )\n";
         }
         

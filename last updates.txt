@@ -1,3 +1,0 @@
-added json output
-added lower level
-added more detailed description of help
