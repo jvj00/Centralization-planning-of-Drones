@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <string.h>
 #include <math.h>
+#include <curl/curl.h>
 
 using namespace std;
 
@@ -16,6 +17,8 @@ using namespace std;
 #define Z 2
 #define DIR 3
 #define DBL_MAX 1.7976931348623157E+308
+#define PI 3.14159265358979323846
+#define API_ELEVATION "https://api.open-elevation.com/api/v1/lookup"
 
 
 char* getCmdOption(char ** begin, char ** end, const std::string & option)
@@ -87,6 +90,85 @@ void compute_targets_pos(int l, int h, int w, int ntarget, string points[MAX_LEV
     
 }
 
+//GEOSPATIAL FUNCTIONS
+void pointAtDistance(long double latC, long double lonC, long double dx, long double dy, long double* lat, long double* lon)
+{
+    #define circEq 40075.017
+    #define circPol 40007.863
+    *lat = latC + (dy * 360 / circPol / 1000);
+    *lon = lonC + (dx * 360 / circEq / 1000 / cos((latC+*lat)*PI/360));
+}
+
+int minElevation(int elevation[], int elevation_length)
+{
+    int minValue=100000;
+    for(int i=0; i<elevation_length; i++)
+        minValue= elevation[i]<minValue ? elevation[i] : minValue;
+    return minValue;
+}
+
+//CURL FUNCTIONS
+string createJSON(long double lat[], long double lon[], int arr_length)
+{
+    string ret="{\"locations\":[";
+    for(int i=0; i<arr_length; i++)
+    {
+        ret+="{\"latitude\": "+to_string(lat[i])+",\"longitude\": "+to_string(lon[i])+"}";
+        if(i!=arr_length-1) ret+=",";
+    }
+    ret+="]}";
+    return ret;
+}
+int readJSON(string buffer, int elevation_out[], int arr_length)
+{
+    int index = 0, stop=0;
+    index = buffer.find("results"); 
+    if(index==string::npos) return 1;
+    for(int i=0; i<arr_length && index<buffer.length(); i++)
+    {
+        index = buffer.find("elevation", index) + 12;
+        stop = buffer.find("}", index);
+        elevation_out[i] = stoi(buffer.substr(index, stop-index));
+    }
+    return 0;
+}
+static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
+int getElevation(long double lat[], long double lon[], int elevation_out[], int arr_length)
+{
+    CURL *curl;
+    CURLcode res;
+    string readBuffer;
+
+    curl = curl_easy_init();
+    if(curl) {
+        //URL
+        curl_easy_setopt(curl, CURLOPT_URL, API_ELEVATION);
+
+        //HEADER DATA
+        struct curl_slist* headers = NULL;
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+        //BODY DATA
+        string data = createJSON(lat, lon, arr_length);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long) strlen(data.c_str()));
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
+
+        //RESPONSE
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+        res = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+
+        //FORMAT RESPONSE
+        readJSON(readBuffer, elevation_out, arr_length);
+    }
+    return 0;
+}
 
 int main(int argc, char** argv)
 {
@@ -99,6 +181,7 @@ int main(int argc, char** argv)
     string out_l="",out_d="", out_list_p="", out_coordinates="", out_empty_p="";
     string agv_pos="", targets[MAX_VISIT_POINTS];
     double agv_coord[3], targets_coord[MAX_VISIT_POINTS][3];
+    long double latC, lonC;
 
     //PARSING ARGUMENTS
     //OUTPUTS
@@ -124,7 +207,7 @@ int main(int argc, char** argv)
         if(!json_file) common_error();
     }
     //PARAMETERS
-    if(argc>=12+index_arguments && (argc-(12+index_arguments))%3==0 && is_number_int(argv[index_arguments]) && is_number_int(argv[1+index_arguments]) && is_number_int(argv[2+index_arguments]) && is_number(argv[3+index_arguments]) && is_number(argv[4+index_arguments]) && is_number(argv[5+index_arguments]) && is_number(argv[6+index_arguments]) && is_number(argv[7+index_arguments]) && is_number(argv[8+index_arguments]))
+    if(argc>=14+index_arguments && (argc-(14+index_arguments))%3==0 && is_number_int(argv[index_arguments]) && is_number_int(argv[1+index_arguments]) && is_number_int(argv[2+index_arguments]) && is_number(argv[3+index_arguments]) && is_number(argv[4+index_arguments]) && is_number(argv[5+index_arguments]) && is_number(argv[6+index_arguments]) && is_number(argv[7+index_arguments]) && is_number(argv[8+index_arguments]) && is_number(argv[9+index_arguments]) && is_number(argv[10+index_arguments]))
     {
         h = atoi(argv[index_arguments++]);
         w = atoi(argv[index_arguments++]);
@@ -135,6 +218,8 @@ int main(int argc, char** argv)
         agv_coord[X] = stod(argv[index_arguments++]);
         agv_coord[Y] = stod(argv[index_arguments++]);
         agv_coord[Z] = stod(argv[index_arguments++]);
+        latC = stold(argv[index_arguments++]);
+        lonC = stold(argv[index_arguments++]);
         for(int i=index_arguments;i<argc && i<MAX_VISIT_POINTS*3+index_arguments;i+=3)
         {
             if(!is_number(argv[i]) || !is_number(argv[i+1]) || !is_number(argv[i+2])) common_error();
@@ -148,7 +233,7 @@ int main(int argc, char** argv)
     else if(argc==2 && (!((string)argv[1]).compare("--help") || !((string)argv[1]).compare("-h")))
     {
         cout << "This tool generate a 3D map of points, giving height, width and levels, distance between points in meters, lowest level in meters, agv position and targets position. 2 drones are on AGV" << endl << endl;
-        cout << "Usage: ./map_tool [options] <height> <width> <levels> <distance_pts> <distance_lvl> <lowest_lvl> <agv_x> <agv_y> <agv_z> <t1_x t1_y t1_z, t2_x t2_y t2_z ...>" << endl;
+        cout << "Usage: ./map_tool [options] <height> <width> <levels> <distance_pts> <distance_lvl> <lowest_lvl> <agv_x> <agv_y> <agv_z> <latC> <lonC> <t1_x t1_y t1_z, t2_x t2_y t2_z ...>" << endl;
         cout << endl;
         cout << "Parameters:" << endl;
         cout << "   <height(pts)> height 2D (y) in points of the map" << endl;
@@ -158,6 +243,7 @@ int main(int argc, char** argv)
         cout << "   <distance_lvl> distance in meters between levels" << endl;
         cout << "   <lowest_lvl> heigth in meters of the lowest level" << endl;
         cout << "   <agv_x> <agv_y> <agv_z> position (x,y,z) of the agv. E.g.: 22.1 23.4 10.0" << endl;
+        cout << "   <latC> <lonC> latitude and longitude of initial point (double dot value). E.g.: 40.93257 30.27429" << endl;
         cout << "   <t1_x t1_y t1_z, t2_x t2_y t2_z ...> list of target position (x,y,z) of the planning. E.g.: 30.1 40.2 25.1" << endl;
         cout << endl;
         cout << "Options:" << endl;
@@ -173,7 +259,16 @@ int main(int argc, char** argv)
 
     //MAIN PROGRAM
 
-    //COMPUTES POINTS & COORDINATES 2 POINTS AND DIRECTIONS
+    //COMPUTE ELEVATIONS
+    int geocoord_length=h*w;
+    long double lat[geocoord_length], lon[geocoord_length];
+    int el[geocoord_length];
+    for(int j=0;j<h;j++)
+        for(int k=0;k<w;k++)
+            pointAtDistance(latC, lonC, k*dst_pts, j*dst_pts, &lat[j*w+k], &lon[j*w+k]);
+    getElevation(lat, lon, el, geocoord_length);
+
+    //COMPUTES POINTS & COORDINATES 2 POINTS
     for(int i=0;i<l;i++)
         for(int j=0;j<h;j++)
             for(int k=0;k<w;k++)
@@ -181,7 +276,7 @@ int main(int argc, char** argv)
                 points[i][j][k] = "p" + to_string((i*w*h)+(j*w)+k);
                 points_coord[i][j][k][X]=k*dst_pts;
                 points_coord[i][j][k][Y]=j*dst_pts;
-                points_coord[i][j][k][Z]=i*dst_lvl+low_lvl;
+                points_coord[i][j][k][Z]=i*dst_lvl+low_lvl+el[j*w+k]; //elevations type: SLM
                 out_coordinates += "{\"name\":\"" + points[i][j][k] + "\",\"x\":" + to_string(points_coord[i][j][k][X]) + ",\"y\":" + to_string(points_coord[i][j][k][Y]) + ",\"z\":" + to_string(points_coord[i][j][k][Z]) + "}";
                 if(i!=l-1 || j!=h-1 || k!=w-1)
                     out_coordinates += ",";

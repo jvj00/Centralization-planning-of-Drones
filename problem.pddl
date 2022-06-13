@@ -10689,8 +10689,8 @@
   )
   (:goal
     (and 
-      (picture p15)
-      (picture p129)
+      (picture p17)
+      (picture p29)
     )
   )
   (:metric minimize
