@@ -9,6 +9,6 @@ mix drones/agv (and others in development), and a tool to create problem by simp
 ## Installation
 1. Compile map_tool.cpp with command `gcc map_tool.cpp -o map_tool -lcurl`
 2. Execute map_tool with parameters (see `example_of_use_map_tool.txt` or type `./map_tool --help` for the guide)
-3. Than execute popf in the popf directory by typing `./plan <path_to_domain.pddl> <path_to_generated_problem.pddl> sol.res`
+3. Then execute popf in the popf directory by typing `./plan <path_to_domain.pddl> <path_to_generated_problem.pddl> sol.res`
 ## Contributors
 [jvj00](https://github.com/jvj00)
