@@ -11,6 +11,7 @@ using namespace std;
 #define MAX_WIDTH 100
 #define MAX_VISIT_POINTS 100
 #define MAX_LEVELS 5
+#define MAX_INCLINATION 0.2 //corresponds to ~12°
 
 #define X 0
 #define Y 1
@@ -99,11 +100,12 @@ void pointAtDistance(long double latC, long double lonC, long double dx, long do
     *lon = lonC + (dx * 360 / circEq / 1000 / cos((latC+*lat)*PI/360));
 }
 
-int minElevation(int elevation[], int elevation_length)
+int minElevation(int elevation[MAX_HEIGHT][MAX_WIDTH], int h, int w)
 {
     int minValue=100000;
-    for(int i=0; i<elevation_length; i++)
-        minValue= elevation[i]<minValue ? elevation[i] : minValue;
+    for(int i=0; i<h; i++)
+        for(int j=0; j<w; j++)
+            minValue= elevation[i][j]<minValue ? elevation[i][j] : minValue;
     return minValue;
 }
 
@@ -119,7 +121,7 @@ string createJSON(long double lat[], long double lon[], int arr_length)
     ret+="]}";
     return ret;
 }
-int readJSON(string buffer, int elevation_out[], int arr_length)
+int readJSON(string buffer, int elevation_out[MAX_HEIGHT][MAX_WIDTH], int arr_length, int w)
 {
     int index = 0, stop=0;
     index = buffer.find("results"); 
@@ -128,7 +130,7 @@ int readJSON(string buffer, int elevation_out[], int arr_length)
     {
         index = buffer.find("elevation", index) + 12;
         stop = buffer.find("}", index);
-        elevation_out[i] = stoi(buffer.substr(index, stop-index));
+        elevation_out[int(i/w)][i%w] = stoi(buffer.substr(index, stop-index));
     }
     return 0;
 }
@@ -137,7 +139,7 @@ static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *use
     ((std::string*)userp)->append((char*)contents, size * nmemb);
     return size * nmemb;
 }
-int getElevation(long double lat[], long double lon[], int elevation_out[], int arr_length)
+int getElevation(long double lat[], long double lon[], int elevation_out[MAX_HEIGHT][MAX_WIDTH], int arr_length, int w)
 {
     CURL *curl;
     CURLcode res;
@@ -165,7 +167,7 @@ int getElevation(long double lat[], long double lon[], int elevation_out[], int 
         curl_easy_cleanup(curl);
 
         //FORMAT RESPONSE
-        readJSON(readBuffer, elevation_out, arr_length);
+        readJSON(readBuffer, elevation_out, arr_length, w);
     }
     return 0;
 }
@@ -176,9 +178,9 @@ int main(int argc, char** argv)
     bool pddl=false, ps2=false, json=false;
     char *pddl_file, *ps2_file, *json_file;
     double dst_pts, dst_lvl, low_lvl;
-    string points[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH];
-    double points_coord[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH][3];
-    string out_link_pddl="",out_distance_pddl="", out_list_pddl="", out_coordinates="", out_empty_pddl="";
+    string points[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH], points_agv[MAX_HEIGHT][MAX_WIDTH];
+    double points_coord[MAX_LEVELS+1][MAX_HEIGHT][MAX_WIDTH][3];
+    string out_link_pddl="",out_distance_pddl="", out_list_pddl="", out_coordinates="", out_empty_pddl="", out_link_agv_pddl="", out_distance_agv_pddl="";
     string agv_pos="", targets[MAX_VISIT_POINTS];
     double agv_coord[3], targets_coord[MAX_VISIT_POINTS][3];
     long double latC, lonC;
@@ -262,11 +264,11 @@ int main(int argc, char** argv)
     //COMPUTE ELEVATIONS
     int geocoord_length=h*w;
     long double lat[geocoord_length], lon[geocoord_length];
-    int el[geocoord_length];
+    int el[MAX_HEIGHT][MAX_WIDTH];
     for(int j=0;j<h;j++)
         for(int k=0;k<w;k++)
             pointAtDistance(latC, lonC, k*dst_pts, j*dst_pts, &lat[j*w+k], &lon[j*w+k]);
-    getElevation(lat, lon, el, geocoord_length);
+    getElevation(lat, lon, el, geocoord_length, w);
 
     //COMPUTES POINTS & COORDINATES 2 POINTS
     for(int i=0;i<l;i++)
@@ -274,10 +276,16 @@ int main(int argc, char** argv)
             for(int k=0;k<w;k++)
             {
                 points[i][j][k] = "p" + to_string((i*w*h)+(j*w)+k);
+
                 points_coord[i][j][k][X]=k*dst_pts;
                 points_coord[i][j][k][Y]=j*dst_pts;
-                points_coord[i][j][k][Z]=i*dst_lvl+low_lvl+el[j*w+k]; //elevations type: SLM
+                points_coord[i][j][k][Z]=i*dst_lvl+low_lvl+el[j][k]; //elevations type: SLM
                 out_coordinates += "{\"name\":\"" + points[i][j][k] + "\",\"x\":" + to_string(points_coord[i][j][k][X]) + ",\"y\":" + to_string(points_coord[i][j][k][Y]) + ",\"z\":" + to_string(points_coord[i][j][k][Z]) + "}";
+                if(i==0)
+                {
+                    points_agv[j][k] = "pagv" + to_string((j*w)+k);
+                    out_coordinates += ",{\"name\":\"" + points_agv[j][k] + "\",\"x\":" + to_string(points_coord[i][j][k][X]) + ",\"y\":" + to_string(points_coord[i][j][k][Y]) + ",\"z\":" + to_string(el[j][k]) + "}";
+                }
                 if(i!=l-1 || j!=h-1 || k!=w-1)
                     out_coordinates += ",";
                 
@@ -285,7 +293,7 @@ int main(int argc, char** argv)
     compute_drones_pos(l,h,w, points, points_coord, agv_coord, &agv_pos);
     compute_targets_pos(l,h,w, ntarget, points, points_coord, targets_coord, targets);    
 
-    //COMPUTES LINKS & DISTANCES
+    //COMPUTES LINKS & DISTANCES DRONES
     for(int i=0;i<l;i++)
         for(int j=0;j<h;j++)
             for(int k=0;k<w;k++)
@@ -381,7 +389,7 @@ int main(int argc, char** argv)
                     }
                     //center
                     out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j][k] + ")\n";
-                    out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j][k] + ") " + to_string(points_coord[i][j][k][Z]-points_coord[i-1][j][k][Z]) + ")\n";
+                    out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j][k] + ") " + to_string(abs(points_coord[i][j][k][Z]-points_coord[i-1][j][k][Z])) + ")\n";
                 }
 
                 //links && distances above level
@@ -429,10 +437,66 @@ int main(int argc, char** argv)
                     }
                     //center
                     out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j][k] + ")\n";
-                    out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j][k] + ") " + to_string(points_coord[i][j][k][Z]-points_coord[i+1][j][k][Z]) + ")\n";
+                    out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j][k] + ") " + to_string(abs(points_coord[i][j][k][Z]-points_coord[i+1][j][k][Z])) + ")\n";
                 }
             }
 
+    //COMPUTES LINKS & DISTANCES AGV
+    for(int j=0;j<h;j++)
+        for(int k=0;k<w;k++)
+        {
+            out_list_pddl += points_agv[j][k] + " ";
+            out_link_pddl += "    (link " + points[0][j][k] + " " + points_agv[j][k] + ")\n";
+            out_distance_pddl += "    (= (distance " + points[0][j][k] + " " + points_agv[j][k] + ") " + to_string(low_lvl) + ")\n";
+            if(j>0 && k>0) //nw
+                if(abs(el[j][k]-el[j-1][k-1])/(dst_pts*1.4142)<=MAX_INCLINATION)
+                {
+                    out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j-1][k-1] + ")\n";
+                    out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j-1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(el[j][k]-el[j-1][k-1],2))) + ")\n";
+                }
+            if(j>0) //nn
+                if(abs(el[j][k]-el[j-1][k])/(dst_pts*1.0)<=MAX_INCLINATION)
+                {
+                    out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j-1][k] + ")\n";
+                    out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j-1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(el[j][k]-el[j-1][k],2))) + ")\n";
+                }
+            if(j>0 && k<w-1) //ne
+                if(abs(el[j][k]-el[j-1][k+1])/(dst_pts*1.4142)<=MAX_INCLINATION)
+                {
+                    out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j-1][k+1] + ")\n";
+                    out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j-1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(el[j][k]-el[j-1][k+1],2))) + ")\n";
+                }
+            if(k<w-1) //ee
+                if(abs(el[j][k]-el[j][k+1])/(dst_pts*1.0)<=MAX_INCLINATION)
+                {
+                    out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j][k+1] + ")\n";
+                    out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j][k+1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(el[j][k]-el[j][k+1],2))) + ")\n";
+                }
+            if(j<h-1 && k<w-1) //se
+                if(abs(el[j][k]-el[j+1][k+1])/(dst_pts*1.4142)<=MAX_INCLINATION)
+                {
+                    out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j+1][k+1] + ")\n";
+                    out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j+1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(el[j][k]-el[j+1][k+1],2))) + ")\n";
+                }
+            if(j<h-1) //ss
+                if(abs(el[j][k]-el[j+1][k])/(dst_pts*1.0)<=MAX_INCLINATION)
+                {
+                    out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j+1][k] + ")\n";
+                    out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j+1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(el[j][k]-el[j+1][k],2))) + ")\n";
+                }
+            if(j<h-1 && k>0) //sw
+                if(abs(el[j][k]-el[j+1][k-1])/(dst_pts*1.4142)<=MAX_INCLINATION)
+                {
+                    out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j+1][k-1] + ")\n";
+                    out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j+1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(el[j][k]-el[j+1][k-1],2))) + ")\n";
+                }
+            if(k>0) //ww
+                if(abs(el[j][k]-el[j][k-1])/(dst_pts*1.0)<=MAX_INCLINATION)
+                {
+                    out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j][k-1] + ")\n";
+                    out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j][k-1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(el[j][k]-el[j][k-1],2))) + ")\n";
+                }
+        }
 
     //WRITE ON PDDL FILE
     if(pddl)
@@ -451,7 +515,7 @@ int main(int argc, char** argv)
                 "    (= (cost) 0)""\n"
                 "    (agv_pos " << agv_pos << ")""\n\n" << out_empty_pddl << "\n";
         
-        pddl_out << out_link_pddl << out_distance_pddl;
+        pddl_out << out_link_pddl << out_distance_pddl << out_link_agv_pddl << out_distance_agv_pddl;
 
         pddl_out << "  )""\n"
                 "  (:goal""\n";
