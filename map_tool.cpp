@@ -178,7 +178,7 @@ int main(int argc, char** argv)
     double dst_pts, dst_lvl, low_lvl;
     string points[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH];
     double points_coord[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH][3];
-    string out_l="",out_d="", out_list_p="", out_coordinates="", out_empty_p="";
+    string out_link_pddl="",out_distance_pddl="", out_list_pddl="", out_coordinates="", out_empty_pddl="";
     string agv_pos="", targets[MAX_VISIT_POINTS];
     double agv_coord[3], targets_coord[MAX_VISIT_POINTS][3];
     long double latC, lonC;
@@ -291,49 +291,49 @@ int main(int argc, char** argv)
             for(int k=0;k<w;k++)
             {
                 //points
-                out_list_p += points[i][j][k] + " ";
-                out_empty_p += "    (empty " + points[i][j][k] + ")\n";
+                out_list_pddl += points[i][j][k] + " ";
+                out_empty_pddl += "    (empty " + points[i][j][k] + ")\n";
 
                 //links && distances in the level
                 if(j>0 && k>0) //nw
                 {
-                    out_l += "    (link " + points[i][j][k] + " " + points[i][j-1][k-1] + ")\n";
-                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j-1][k-1] + ") " + to_string(dst_pts * 1.4142) + ")\n";
+                    out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j-1][k-1] + ")\n";
+                    out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j-1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j-1][k-1][Z],2))) + ")\n";
                 } 
                 if(j>0) //nn
                 {
-                    out_l += "    (link " + points[i][j][k] + " " + points[i][j-1][k] + ")\n";
-                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j-1][k] + ") " + to_string(dst_pts * 1.0) + ")\n";
+                    out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j-1][k] + ")\n";
+                    out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j-1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j-1][k][Z],2))) + ")\n";
                 } 
                 if(j>0 && k<w-1) //ne
                 {
-                    out_l += "    (link " + points[i][j][k] + " " + points[i][j-1][k+1] + ")\n";
-                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j-1][k+1] + ") " + to_string(dst_pts * 1.4142) + ")\n";
+                    out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j-1][k+1] + ")\n";
+                    out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j-1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j-1][k+1][Z],2))) + ")\n";
                 } 
                 if(k<w-1) //ee
                 {
-                    out_l += "    (link " + points[i][j][k] + " " + points[i][j][k+1] + ")\n";
-                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j][k+1] + ") " + to_string(dst_pts * 1.0) + ")\n";
+                    out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j][k+1] + ")\n";
+                    out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j][k+1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j][k+1][Z],2))) + ")\n";
                 } 
                 if(j<h-1 && k<w-1) //se
                 {
-                    out_l += "    (link " + points[i][j][k] + " " + points[i][j+1][k+1] + ")\n";
-                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j+1][k+1] + ") " + to_string(dst_pts * 1.4142) + ")\n";
+                    out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j+1][k+1] + ")\n";
+                    out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j+1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j+1][k+1][Z],2))) + ")\n";
                 } 
                 if(j<h-1) //ss
                 {
-                    out_l += "    (link " + points[i][j][k] + " " + points[i][j+1][k] + ")\n";
-                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j+1][k] + ") " + to_string(dst_pts * 1.0) + ")\n";
+                    out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j+1][k] + ")\n";
+                    out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j+1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j+1][k][Z],2))) + ")\n";
                 } 
                 if(j<h-1 && k>0) //sw
                 {
-                    out_l += "    (link " + points[i][j][k] + " " + points[i][j+1][k-1] + ")\n";
-                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j+1][k-1] + ") " + to_string(dst_pts * 1.4142) + ")\n";
+                    out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j+1][k-1] + ")\n";
+                    out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j+1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j+1][k-1][Z],2))) + ")\n";
                 } 
                 if(k>0) //ww
                 {
-                    out_l += "    (link " + points[i][j][k] + " " + points[i][j][k-1] + ")\n";
-                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i][j][k-1] + ") " + to_string(dst_pts * 1.0) + ")\n";
+                    out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j][k-1] + ")\n";
+                    out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j][k-1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j][k-1][Z],2))) + ")\n";
                 } 
 
                 //links && distances under level
@@ -341,47 +341,47 @@ int main(int argc, char** argv)
                 {
                     if(j>0 && k>0) //nw
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j-1][k-1] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j-1][k-1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j-1][k-1] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j-1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j-1][k-1][Z],2))) + ")\n";
                     } 
                     if(j>0) //nn
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j-1][k] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j-1][k] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j-1][k] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j-1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j-1][k][Z],2))) + ")\n";
                     } 
                     if(j>0 && k<w-1) //ne
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j-1][k+1] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j-1][k+1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j-1][k+1] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j-1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j-1][k+1][Z],2))) + ")\n";
                     } 
                     if(k<w-1) //ee
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j][k+1] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j][k+1] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j][k+1] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j][k+1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j][k+1][Z],2))) + ")\n";
                     } 
                     if(j<h-1 && k<w-1) //se
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j+1][k+1] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j+1][k+1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j+1][k+1] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j+1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j+1][k+1][Z],2))) + ")\n";
                     } 
                     if(j<h-1) //ss
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j+1][k] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j+1][k] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j+1][k] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j+1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j+1][k][Z],2))) + ")\n";
                     } 
                     if(j<h-1 && k>0) //sw
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j+1][k-1] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j+1][k-1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j+1][k-1] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j+1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j+1][k-1][Z],2))) + ")\n";
                     } 
                     if(k>0) //ww
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i-1][j][k-1] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j][k-1] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j][k-1] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j][k-1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j][k-1][Z],2))) + ")\n";
                     }
-                    //centered
-                    out_l += "    (link " + points[i][j][k] + " " + points[i-1][j][k] + ")\n";
-                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i-1][j][k] + ") " + to_string(dst_lvl) + ")\n";
+                    //center
+                    out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j][k] + ")\n";
+                    out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j][k] + ") " + to_string(points_coord[i][j][k][Z]-points_coord[i-1][j][k][Z]) + ")\n";
                 }
 
                 //links && distances above level
@@ -389,50 +389,49 @@ int main(int argc, char** argv)
                 {
                     if(j>0 && k>0) //nw
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j-1][k-1] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j-1][k-1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j-1][k-1] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j-1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j-1][k-1][Z],2))) + ")\n";
                     } 
                     if(j>0) //nn
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j-1][k] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j-1][k] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j-1][k] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j-1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j-1][k][Z],2))) + ")\n";
                     } 
                     if(j>0 && k<w-1) //ne
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j-1][k+1] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j-1][k+1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j-1][k+1] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j-1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j-1][k+1][Z],2))) + ")\n";
                     } 
                     if(k<w-1) //ee
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j][k+1] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j][k+1] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j][k+1] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j][k+1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j][k+1][Z],2))) + ")\n";
                     } 
                     if(j<h-1 && k<w-1) //se
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j+1][k+1] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j+1][k+1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j+1][k+1] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j+1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j+1][k+1][Z],2))) + ")\n";
                     } 
                     if(j<h-1) //ss
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j+1][k] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j+1][k] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j+1][k] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j+1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j+1][k][Z],2))) + ")\n";
                     } 
                     if(j<h-1 && k>0) //sw
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j+1][k-1] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j+1][k-1] + ") " + to_string(sqrt(2*dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j+1][k-1] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j+1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j+1][k-1][Z],2))) + ")\n";
                     } 
                     if(k>0) //ww
                     {
-                        out_l += "    (link " + points[i][j][k] + " " + points[i+1][j][k-1] + ")\n";
-                        out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j][k-1] + ") " + to_string(sqrt(dst_pts*dst_pts+dst_lvl*dst_lvl)) + ")\n";
+                        out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j][k-1] + ")\n";
+                        out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j][k-1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j][k-1][Z],2))) + ")\n";
                     }
-                    //centered
-                    out_l += "    (link " + points[i][j][k] + " " + points[i+1][j][k] + ")\n";
-                    out_d += "    (= (distance " + points[i][j][k] + " " + points[i+1][j][k] + ") " + to_string(dst_lvl) + ")\n";
+                    //center
+                    out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j][k] + ")\n";
+                    out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j][k] + ") " + to_string(points_coord[i][j][k][Z]-points_coord[i+1][j][k][Z]) + ")\n";
                 }
-
-            }           
+            }
 
 
     //WRITE ON PDDL FILE
@@ -444,15 +443,15 @@ int main(int argc, char** argv)
         pddl_out << "(define (problem planning_map)""\n"
                 "  (:domain planner)""\n"
                 "  (:objects""\n"
-                "     " << out_list_p << " - point\n"
+                "     " << out_list_pddl << " - point\n"
                 "     d1 d2 - drone\n"
                 "  )""\n"
                 "  ""\n"
                 "  (:init""\n"
                 "    (= (cost) 0)""\n"
-                "    (agv_pos " << agv_pos << ")""\n\n" << out_empty_p << "\n";
+                "    (agv_pos " << agv_pos << ")""\n\n" << out_empty_pddl << "\n";
         
-        pddl_out << out_l << out_d;
+        pddl_out << out_link_pddl << out_distance_pddl;
 
         pddl_out << "  )""\n"
                 "  (:goal""\n";
