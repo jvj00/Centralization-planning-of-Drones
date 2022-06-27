@@ -7,7 +7,7 @@
   
   (:init
     (= (cost) 0)
-    (agv_pos p23)
+    (agv_pos pagv23)
 
     (empty p0)
     (empty p1)

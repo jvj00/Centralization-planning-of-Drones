@@ -64,19 +64,20 @@
   )
 
   (:durative-action landing
-    :parameters (?d - drone ?p - point)
+    :parameters (?d - drone ?pagv - point ?pdrone - point)
     :duration (= ?duration 0.3)
     :condition (and
               (at start (and
-                    (drone_pos ?d ?p)
-                    (agv_pos ?p)
+                    (drone_pos ?d ?pdrone)
+                    (agv_pos ?pagv)
+                    (link ?pdrone ?pagv)
               ))
     )
     :effect (and
             (at start (and
-              (not (drone_pos ?d ?p))
-              (empty ?p)
-              (not (busy ?p))
+              (not (drone_pos ?d ?pdrone))
+              (empty ?pdrone)
+              (not (busy ?pdrone))
             ))
             (at end (and
                   (increase (cost) 0.1) 
@@ -85,22 +86,23 @@
   )
 
   (:durative-action takeoff
-    :parameters (?d - drone ?p - point)
+    :parameters (?d - drone ?pagv - point ?pdrone - point)
     :duration (= ?duration 0.3)
     :condition (and
               (at start (and
-                    (agv_pos ?p)
+                    (agv_pos ?pagv)
+                    (link ?pdrone ?pagv)
               ))
               (at end (and
-                    (empty ?p)
+                    (empty ?pdrone)
               ))
     )
     :effect (and
             (at end (and
-                  (drone_pos ?d ?p)
-                  (busy ?p)
-                  (not (empty ?p))
-                  (increase (cost) 0.1) 
+                  (drone_pos ?d ?pdrone)
+                  (busy ?pdrone)
+                  (not (empty ?pdrone))
+                  (increase (cost) 0.1)
             ))
     )
   )
