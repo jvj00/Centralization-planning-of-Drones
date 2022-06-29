@@ -511,7 +511,9 @@ int main(int argc, char** argv)
                 "  ""\n"
                 "  (:init""\n"
                 "    (= (cost) 0)""\n"
-                "    (agv_pos " << agv_pos << ")""\n\n" << out_empty_pddl << "\n";
+                "    (agv_pos " << agv_pos << ")""\n\n" << out_empty_pddl << "\n"
+                "    (agv_has d1)\n"
+                "    (agv_has d2)\n";
         
         pddl_out << out_link_pddl << out_distance_pddl << out_link_agv_pddl << out_distance_agv_pddl;
 
