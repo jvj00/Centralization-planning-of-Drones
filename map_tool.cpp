@@ -174,12 +174,12 @@ int getElevation(long double lat[], long double lon[], int elevation_out[MAX_HEI
 int main(int argc, char** argv)
 {
     int h, w, l, ntarget=0, index_arguments=1;
-    bool pddl=false, ps2=false, json=false;
-    char *pddl_file, *ps2_file, *json_file;
+    bool pddl=false, links=false, json=false;
+    char *pddl_file, *links_file, *json_file;
     double dst_pts, dst_lvl, low_lvl;
     string points[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH], points_agv[MAX_HEIGHT][MAX_WIDTH];
     double points_coord[MAX_LEVELS+1][MAX_HEIGHT][MAX_WIDTH][3];
-    string out_link_pddl="",out_distance_pddl="", out_list_pddl="", out_coordinates="", out_empty_pddl="", out_link_agv_pddl="", out_distance_agv_pddl="";
+    string out_link_pddl="",out_distance_pddl="", out_list_pddl="", out_coordinates="", out_empty_pddl="", out_link_agv_pddl="", out_distance_agv_pddl="", out_link_json="";
     string agv_pos="", targets[MAX_VISIT_POINTS];
     double agv_coord[2], targets_coord[MAX_VISIT_POINTS][3];
     long double latC, lonC;
@@ -193,12 +193,12 @@ int main(int argc, char** argv)
         index_arguments+=2;
         if(!pddl_file) common_error();
     }
-    if(cmdOptionExists(argv, argv+argc, "--ps2"))
+    if(cmdOptionExists(argv, argv+argc, "--links"))
     {
-        ps2=true;
-        ps2_file=getCmdOption(argv, argv + argc, "--ps2");
+        links=true;
+        links_file=getCmdOption(argv, argv + argc, "--links");
         index_arguments+=2;
-        if(!ps2_file) common_error();
+        if(!links_file) common_error();
     }
     if(cmdOptionExists(argv, argv+argc, "--json"))
     {
@@ -248,7 +248,7 @@ int main(int argc, char** argv)
         cout << endl;
         cout << "Options:" << endl;
         cout << "   --pddl <path_to_out_file>          generates a pddl problem as output" << endl;
-        cout << "   --ps2 <path_to_out_file>           generates a plansys2 problem as output" << endl;
+        cout << "   --links <path_to_out_file>         generates a json file with links as secondary output" << endl;
         cout << "   --json <path_to_out_file>          generates a json file with coordinates as secondary output" << endl;
         exit(0);
     }
@@ -305,41 +305,49 @@ int main(int argc, char** argv)
                 {
                     out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j-1][k-1] + ")\n";
                     out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j-1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j-1][k-1][Z],2))) + ")\n";
+                    out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i][j-1][k-1][X])+",\"y\":"+to_string(points_coord[i][j-1][k-1][Y])+",\"z\":"+to_string(points_coord[i][j-1][k-1][Z])+"}},";
                 } 
                 if(j>0) //nn
                 {
                     out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j-1][k] + ")\n";
                     out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j-1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j-1][k][Z],2))) + ")\n";
+                    out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i][j-1][k][X])+",\"y\":"+to_string(points_coord[i][j-1][k][Y])+",\"z\":"+to_string(points_coord[i][j-1][k][Z])+"}},";
                 } 
                 if(j>0 && k<w-1) //ne
                 {
                     out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j-1][k+1] + ")\n";
                     out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j-1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j-1][k+1][Z],2))) + ")\n";
+                    out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i][j-1][k+1][X])+",\"y\":"+to_string(points_coord[i][j-1][k+1][Y])+",\"z\":"+to_string(points_coord[i][j-1][k+1][Z])+"}},";
                 } 
                 if(k<w-1) //ee
                 {
                     out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j][k+1] + ")\n";
                     out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j][k+1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j][k+1][Z],2))) + ")\n";
+                    out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i][j][k+1][X])+",\"y\":"+to_string(points_coord[i][j][k+1][Y])+",\"z\":"+to_string(points_coord[i][j][k+1][Z])+"}},";
                 } 
                 if(j<h-1 && k<w-1) //se
                 {
                     out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j+1][k+1] + ")\n";
                     out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j+1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j+1][k+1][Z],2))) + ")\n";
+                    out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i][j+1][k+1][X])+",\"y\":"+to_string(points_coord[i][j+1][k+1][Y])+",\"z\":"+to_string(points_coord[i][j+1][k+1][Z])+"}},";
                 } 
                 if(j<h-1) //ss
                 {
                     out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j+1][k] + ")\n";
                     out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j+1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j+1][k][Z],2))) + ")\n";
+                    out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i][j+1][k][X])+",\"y\":"+to_string(points_coord[i][j+1][k][Y])+",\"z\":"+to_string(points_coord[i][j+1][k][Z])+"}},";
                 } 
                 if(j<h-1 && k>0) //sw
                 {
                     out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j+1][k-1] + ")\n";
                     out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j+1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j+1][k-1][Z],2))) + ")\n";
+                    out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i][j+1][k-1][X])+",\"y\":"+to_string(points_coord[i][j+1][k-1][Y])+",\"z\":"+to_string(points_coord[i][j+1][k-1][Z])+"}},";
                 } 
                 if(k>0) //ww
                 {
                     out_link_pddl += "    (link " + points[i][j][k] + " " + points[i][j][k-1] + ")\n";
                     out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i][j][k-1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i][j][k-1][Z],2))) + ")\n";
+                    out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i][j][k-1][X])+",\"y\":"+to_string(points_coord[i][j][k-1][Y])+",\"z\":"+to_string(points_coord[i][j][k-1][Z])+"}},";
                 } 
 
                 //links && distances under level
@@ -349,45 +357,54 @@ int main(int argc, char** argv)
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j-1][k-1] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j-1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j-1][k-1][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i-1][j-1][k-1][X])+",\"y\":"+to_string(points_coord[i-1][j-1][k-1][Y])+",\"z\":"+to_string(points_coord[i-1][j-1][k-1][Z])+"}},";
                     } 
                     if(j>0) //nn
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j-1][k] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j-1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j-1][k][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i-1][j-1][k][X])+",\"y\":"+to_string(points_coord[i-1][j-1][k][Y])+",\"z\":"+to_string(points_coord[i-1][j-1][k][Z])+"}},";
                     } 
                     if(j>0 && k<w-1) //ne
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j-1][k+1] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j-1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j-1][k+1][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i-1][j-1][k+1][X])+",\"y\":"+to_string(points_coord[i-1][j-1][k+1][Y])+",\"z\":"+to_string(points_coord[i-1][j-1][k+1][Z])+"}},";
                     } 
                     if(k<w-1) //ee
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j][k+1] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j][k+1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j][k+1][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i-1][j][k+1][X])+",\"y\":"+to_string(points_coord[i-1][j][k+1][Y])+",\"z\":"+to_string(points_coord[i-1][j][k+1][Z])+"}},";
                     } 
                     if(j<h-1 && k<w-1) //se
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j+1][k+1] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j+1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j+1][k+1][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i-1][j+1][k+1][X])+",\"y\":"+to_string(points_coord[i-1][j+1][k+1][Y])+",\"z\":"+to_string(points_coord[i-1][j+1][k+1][Z])+"}},";
                     } 
                     if(j<h-1) //ss
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j+1][k] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j+1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j+1][k][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i-1][j+1][k][X])+",\"y\":"+to_string(points_coord[i-1][j+1][k][Y])+",\"z\":"+to_string(points_coord[i-1][j+1][k][Z])+"}},";
                     } 
                     if(j<h-1 && k>0) //sw
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j+1][k-1] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j+1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j+1][k-1][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i-1][j+1][k-1][X])+",\"y\":"+to_string(points_coord[i-1][j+1][k-1][Y])+",\"z\":"+to_string(points_coord[i-1][j+1][k-1][Z])+"}},";
                     } 
                     if(k>0) //ww
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j][k-1] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j][k-1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i-1][j][k-1][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i-1][j][k-1][X])+",\"y\":"+to_string(points_coord[i-1][j][k-1][Y])+",\"z\":"+to_string(points_coord[i-1][j][k-1][Z])+"}},";
                     }
                     //center
                     out_link_pddl += "    (link " + points[i][j][k] + " " + points[i-1][j][k] + ")\n";
                     out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i-1][j][k] + ") " + to_string(abs(points_coord[i][j][k][Z]-points_coord[i-1][j][k][Z])) + ")\n";
+                    out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i-1][j][k][X])+",\"y\":"+to_string(points_coord[i-1][j][k][Y])+",\"z\":"+to_string(points_coord[i-1][j][k][Z])+"}},";
                 }
 
                 //links && distances above level
@@ -397,45 +414,54 @@ int main(int argc, char** argv)
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j-1][k-1] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j-1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j-1][k-1][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i+1][j-1][k-1][X])+",\"y\":"+to_string(points_coord[i+1][j-1][k-1][Y])+",\"z\":"+to_string(points_coord[i+1][j-1][k-1][Z])+"}},";
                     } 
                     if(j>0) //nn
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j-1][k] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j-1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j-1][k][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i+1][j-1][k][X])+",\"y\":"+to_string(points_coord[i+1][j-1][k][Y])+",\"z\":"+to_string(points_coord[i+1][j-1][k][Z])+"}},";
                     } 
                     if(j>0 && k<w-1) //ne
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j-1][k+1] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j-1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j-1][k+1][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i+1][j-1][k+1][X])+",\"y\":"+to_string(points_coord[i+1][j-1][k+1][Y])+",\"z\":"+to_string(points_coord[i+1][j-1][k+1][Z])+"}},";
                     } 
                     if(k<w-1) //ee
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j][k+1] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j][k+1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j][k+1][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i+1][j][k+1][X])+",\"y\":"+to_string(points_coord[i+1][j][k+1][Y])+",\"z\":"+to_string(points_coord[i+1][j][k+1][Z])+"}},";
                     } 
                     if(j<h-1 && k<w-1) //se
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j+1][k+1] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j+1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j+1][k+1][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i+1][j+1][k+1][X])+",\"y\":"+to_string(points_coord[i+1][j+1][k+1][Y])+",\"z\":"+to_string(points_coord[i+1][j+1][k+1][Z])+"}},";
                     } 
                     if(j<h-1) //ss
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j+1][k] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j+1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j+1][k][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i+1][j+1][k][X])+",\"y\":"+to_string(points_coord[i+1][j+1][k][Y])+",\"z\":"+to_string(points_coord[i+1][j+1][k][Z])+"}},";
                     } 
                     if(j<h-1 && k>0) //sw
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j+1][k-1] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j+1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j+1][k-1][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i+1][j+1][k-1][X])+",\"y\":"+to_string(points_coord[i+1][j+1][k-1][Y])+",\"z\":"+to_string(points_coord[i+1][j+1][k-1][Z])+"}},";
                     } 
                     if(k>0) //ww
                     {
                         out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j][k-1] + ")\n";
                         out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j][k-1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(points_coord[i][j][k][Z]-points_coord[i+1][j][k-1][Z],2))) + ")\n";
+                        out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i+1][j][k-1][X])+",\"y\":"+to_string(points_coord[i+1][j][k-1][Y])+",\"z\":"+to_string(points_coord[i+1][j][k-1][Z])+"}},";
                     }
                     //center
                     out_link_pddl += "    (link " + points[i][j][k] + " " + points[i+1][j][k] + ")\n";
                     out_distance_pddl += "    (= (distance " + points[i][j][k] + " " + points[i+1][j][k] + ") " + to_string(abs(points_coord[i][j][k][Z]-points_coord[i+1][j][k][Z])) + ")\n";
+                    out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[i][j][k][X])+",\"y\":"+to_string(points_coord[i][j][k][Y])+",\"z\":"+to_string(points_coord[i][j][k][Z])+"},\"to\":{\"x\":"+to_string(points_coord[i+1][j][k][X])+",\"y\":"+to_string(points_coord[i+1][j][k][Y])+",\"z\":"+to_string(points_coord[i+1][j][k][Z])+"}},";
                 }
             }
 
@@ -446,53 +472,62 @@ int main(int argc, char** argv)
             out_list_pddl += points_agv[j][k] + " ";
             out_link_pddl += "    (link " + points[0][j][k] + " " + points_agv[j][k] + ")\n";
             out_distance_pddl += "    (= (distance " + points[0][j][k] + " " + points_agv[j][k] + ") " + to_string(low_lvl) + ")\n";
+            out_link_json += "{\"type\": \"agv\",\"from\":{\"x\":"+to_string(points_coord[0][j][k][X])+",\"y\":"+to_string(points_coord[0][j][k][Y])+",\"z\":"+to_string(el[j][k])+"},\"to\":{\"x\":"+to_string(points_coord[0][j][k][X])+",\"y\":"+to_string(points_coord[0][j][k][Y])+",\"z\":"+to_string(points_coord[0][j][k][Z])+"}},";
             if(j>0 && k>0) //nw
                 if(abs(el[j][k]-el[j-1][k-1])/(dst_pts*1.4142)<=MAX_INCLINATION)
                 {
                     out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j-1][k-1] + ")\n";
                     out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j-1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(el[j][k]-el[j-1][k-1],2))) + ")\n";
+                    out_link_json += "{\"type\": \"agv\",\"from\":{\"x\":"+to_string(points_coord[0][j][k][X])+",\"y\":"+to_string(points_coord[0][j][k][Y])+",\"z\":"+to_string(el[j][k])+"},\"to\":{\"x\":"+to_string(points_coord[0][j-1][k-1][X])+",\"y\":"+to_string(points_coord[0][j-1][k-1][Y])+",\"z\":"+to_string(el[j-1][k-1])+"}},";
                 }
             if(j>0) //nn
                 if(abs(el[j][k]-el[j-1][k])/(dst_pts*1.0)<=MAX_INCLINATION)
                 {
                     out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j-1][k] + ")\n";
                     out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j-1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(el[j][k]-el[j-1][k],2))) + ")\n";
+                    out_link_json += "{\"type\": \"agv\",\"from\":{\"x\":"+to_string(points_coord[0][j][k][X])+",\"y\":"+to_string(points_coord[0][j][k][Y])+",\"z\":"+to_string(el[j][k])+"},\"to\":{\"x\":"+to_string(points_coord[0][j-1][k][X])+",\"y\":"+to_string(points_coord[0][j-1][k][Y])+",\"z\":"+to_string(el[j-1][k])+"}},";
                 }
             if(j>0 && k<w-1) //ne
                 if(abs(el[j][k]-el[j-1][k+1])/(dst_pts*1.4142)<=MAX_INCLINATION)
                 {
                     out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j-1][k+1] + ")\n";
                     out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j-1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(el[j][k]-el[j-1][k+1],2))) + ")\n";
+                    out_link_json += "{\"type\": \"agv\",\"from\":{\"x\":"+to_string(points_coord[0][j][k][X])+",\"y\":"+to_string(points_coord[0][j][k][Y])+",\"z\":"+to_string(el[j][k])+"},\"to\":{\"x\":"+to_string(points_coord[0][j-1][k+1][X])+",\"y\":"+to_string(points_coord[0][j-1][k+1][Y])+",\"z\":"+to_string(el[j-1][k+1])+"}},";
                 }
             if(k<w-1) //ee
                 if(abs(el[j][k]-el[j][k+1])/(dst_pts*1.0)<=MAX_INCLINATION)
                 {
                     out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j][k+1] + ")\n";
                     out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j][k+1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(el[j][k]-el[j][k+1],2))) + ")\n";
+                    out_link_json += "{\"type\": \"agv\",\"from\":{\"x\":"+to_string(points_coord[0][j][k][X])+",\"y\":"+to_string(points_coord[0][j][k][Y])+",\"z\":"+to_string(el[j][k])+"},\"to\":{\"x\":"+to_string(points_coord[0][j][k+1][X])+",\"y\":"+to_string(points_coord[0][j][k+1][Y])+",\"z\":"+to_string(el[j][k+1])+"}},";
                 }
             if(j<h-1 && k<w-1) //se
                 if(abs(el[j][k]-el[j+1][k+1])/(dst_pts*1.4142)<=MAX_INCLINATION)
                 {
                     out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j+1][k+1] + ")\n";
                     out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j+1][k+1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(el[j][k]-el[j+1][k+1],2))) + ")\n";
+                    out_link_json += "{\"type\": \"agv\",\"from\":{\"x\":"+to_string(points_coord[0][j][k][X])+",\"y\":"+to_string(points_coord[0][j][k][Y])+",\"z\":"+to_string(el[j][k])+"},\"to\":{\"x\":"+to_string(points_coord[0][j+1][k+1][X])+",\"y\":"+to_string(points_coord[0][j+1][k+1][Y])+",\"z\":"+to_string(el[j+1][k+1])+"}},";
                 }
             if(j<h-1) //ss
                 if(abs(el[j][k]-el[j+1][k])/(dst_pts*1.0)<=MAX_INCLINATION)
                 {
                     out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j+1][k] + ")\n";
                     out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j+1][k] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(el[j][k]-el[j+1][k],2))) + ")\n";
+                    out_link_json += "{\"type\": \"agv\",\"from\":{\"x\":"+to_string(points_coord[0][j][k][X])+",\"y\":"+to_string(points_coord[0][j][k][Y])+",\"z\":"+to_string(el[j][k])+"},\"to\":{\"x\":"+to_string(points_coord[0][j+1][k][X])+",\"y\":"+to_string(points_coord[0][j+1][k][Y])+",\"z\":"+to_string(el[j+1][k])+"}},";
                 }
             if(j<h-1 && k>0) //sw
                 if(abs(el[j][k]-el[j+1][k-1])/(dst_pts*1.4142)<=MAX_INCLINATION)
                 {
                     out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j+1][k-1] + ")\n";
                     out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j+1][k-1] + ") " + to_string(sqrt(2*pow(dst_pts,2)+pow(el[j][k]-el[j+1][k-1],2))) + ")\n";
+                    out_link_json += "{\"type\": \"agv\",\"from\":{\"x\":"+to_string(points_coord[0][j][k][X])+",\"y\":"+to_string(points_coord[0][j][k][Y])+",\"z\":"+to_string(el[j][k])+"},\"to\":{\"x\":"+to_string(points_coord[0][j+1][k-1][X])+",\"y\":"+to_string(points_coord[0][j+1][k-1][Y])+",\"z\":"+to_string(el[j+1][k-1])+"}},";
                 }
             if(k>0) //ww
                 if(abs(el[j][k]-el[j][k-1])/(dst_pts*1.0)<=MAX_INCLINATION)
                 {
                     out_link_agv_pddl += "    (link_agv " + points_agv[j][k] + " " + points_agv[j][k-1] + ")\n";
                     out_distance_agv_pddl += "    (= (distance_agv " + points_agv[j][k] + " " + points_agv[j][k-1] + ") " + to_string(sqrt(pow(dst_pts,2)+pow(el[j][k]-el[j][k-1],2))) + ")\n";
+                    out_link_json += "{\"type\": \"agv\",\"from\":{\"x\":"+to_string(points_coord[0][j][k][X])+",\"y\":"+to_string(points_coord[0][j][k][Y])+",\"z\":"+to_string(el[j][k])+"},\"to\":{\"x\":"+to_string(points_coord[0][j][k-1][X])+",\"y\":"+to_string(points_coord[0][j][k-1][Y])+",\"z\":"+to_string(el[j][k-1])+"}},";
                 }
         }
 
@@ -538,10 +573,12 @@ int main(int argc, char** argv)
     }
 
     //WRITE ON PS2 FILE
-    if(ps2)
+    if(links)
     {
-        ofstream ps2_out;
-        ps2_out.open(ps2_file);
+        ofstream links_out;
+        links_out.open(links_file);
+        out_link_json.pop_back();
+        links_out << "{\"links\": [" << out_link_json << "]}";
     }
 
     //WRITE ON JSON FILE
