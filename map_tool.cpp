@@ -472,7 +472,7 @@ int main(int argc, char** argv)
             out_list_pddl += points_agv[j][k] + " ";
             out_link_pddl += "    (link " + points[0][j][k] + " " + points_agv[j][k] + ")\n";
             out_distance_pddl += "    (= (distance " + points[0][j][k] + " " + points_agv[j][k] + ") " + to_string(low_lvl) + ")\n";
-            out_link_json += "{\"type\": \"agv\",\"from\":{\"x\":"+to_string(points_coord[0][j][k][X])+",\"y\":"+to_string(points_coord[0][j][k][Y])+",\"z\":"+to_string(el[j][k])+"},\"to\":{\"x\":"+to_string(points_coord[0][j][k][X])+",\"y\":"+to_string(points_coord[0][j][k][Y])+",\"z\":"+to_string(points_coord[0][j][k][Z])+"}},";
+            out_link_json += "{\"type\": \"drone\",\"from\":{\"x\":"+to_string(points_coord[0][j][k][X])+",\"y\":"+to_string(points_coord[0][j][k][Y])+",\"z\":"+to_string(el[j][k])+"},\"to\":{\"x\":"+to_string(points_coord[0][j][k][X])+",\"y\":"+to_string(points_coord[0][j][k][Y])+",\"z\":"+to_string(points_coord[0][j][k][Z])+"}},";
             if(j>0 && k>0) //nw
                 if(abs(el[j][k]-el[j-1][k-1])/(dst_pts*1.4142)<=MAX_INCLINATION)
                 {
