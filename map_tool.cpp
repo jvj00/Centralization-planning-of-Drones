@@ -53,7 +53,23 @@ void common_error()
     exit(1);
 }
 
-void compute_drones_pos(int l, int h, int w, string points_agv[MAX_HEIGHT][MAX_WIDTH], double points_coord[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH][3], double* agv_coord, string* agv_pos)
+
+void compute_drone_pos(int l, int h, int w, string points[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH], double points_coord[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH][3], double* drone_coord, string* drone_pos)
+{
+    double drone_min_value=DBL_MAX;
+    for(int i=0;i<l;i++)
+        for(int j=0;j<h;j++)
+            for(int k=0;k<w;k++)
+            {
+                double drone_dist=sqrt(pow(drone_coord[X]-points_coord[i][j][k][X],2)+pow(drone_coord[Y]-points_coord[i][j][k][Y],2)+pow(drone_coord[Z]-points_coord[i][j][k][Z],2));
+                if(drone_dist<drone_min_value)
+                {
+                    drone_min_value=drone_dist;
+                    *drone_pos=points[i][j][k];
+                }
+            }
+}
+void compute_agv_pos(int l, int h, int w, string points_agv[MAX_HEIGHT][MAX_WIDTH], double points_coord[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH][3], double* agv_coord, string* agv_pos)
 {
     double agv_min_value=DBL_MAX;
     for(int j=0;j<h;j++)
@@ -174,14 +190,14 @@ int getElevation(long double lat[], long double lon[], int elevation_out[MAX_HEI
 int main(int argc, char** argv)
 {
     int h, w, l, ntarget=0, index_arguments=1;
-    bool pddl=false, links=false, json=false;
+    bool pddl=false, links=false, json=false, return_drones=false;
     char *pddl_file, *links_file, *json_file;
     double dst_pts, dst_lvl, low_lvl;
     string points[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH], points_agv[MAX_HEIGHT][MAX_WIDTH];
     double points_coord[MAX_LEVELS+1][MAX_HEIGHT][MAX_WIDTH][3];
     string out_link_pddl="",out_distance_pddl="", out_list_pddl="", out_coordinates="", out_empty_pddl="", out_link_agv_pddl="", out_distance_agv_pddl="", out_link_json="";
-    string agv_pos="", targets[MAX_VISIT_POINTS];
-    double agv_coord[2], targets_coord[MAX_VISIT_POINTS][3];
+    string agv_pos="", d1_pos="", d2_pos="", targets[MAX_VISIT_POINTS];
+    double agv_coord[2], targets_coord[MAX_VISIT_POINTS][3], d1_coord[3], d2_coord[3];
     long double latC, lonC;
 
     //PARSING ARGUMENTS
@@ -207,8 +223,13 @@ int main(int argc, char** argv)
         index_arguments+=2;
         if(!json_file) common_error();
     }
+    if(cmdOptionExists(argv, argv+argc, "--return"))
+    {
+        return_drones=true;
+        index_arguments++;
+    }
     //PARAMETERS
-    if(argc>=13+index_arguments && (argc-(13+index_arguments))%3==0 && is_number_int(argv[index_arguments]) && is_number_int(argv[1+index_arguments]) && is_number_int(argv[2+index_arguments]) && is_number(argv[3+index_arguments]) && is_number(argv[4+index_arguments]) && is_number(argv[5+index_arguments]) && is_number(argv[6+index_arguments]) && is_number(argv[7+index_arguments]) && is_number(argv[8+index_arguments]) && is_number(argv[9+index_arguments]))
+    if(!return_drones && argc>=13+index_arguments && (argc-(13+index_arguments))%3==0 && is_number_int(argv[index_arguments]) && is_number_int(argv[1+index_arguments]) && is_number_int(argv[2+index_arguments]) && is_number(argv[3+index_arguments]) && is_number(argv[4+index_arguments]) && is_number(argv[5+index_arguments]) && is_number(argv[6+index_arguments]) && is_number(argv[7+index_arguments]) && is_number(argv[8+index_arguments]) && is_number(argv[9+index_arguments]))
     {
         h = atoi(argv[index_arguments++]);
         w = atoi(argv[index_arguments++]);
@@ -229,11 +250,30 @@ int main(int argc, char** argv)
             ntarget++;
         }
     }
+    else if(return_drones && argc==16+index_arguments && is_number_int(argv[index_arguments]) && is_number_int(argv[1+index_arguments]) && is_number_int(argv[2+index_arguments]) && is_number(argv[3+index_arguments]) && is_number(argv[4+index_arguments]) && is_number(argv[5+index_arguments]) && is_number(argv[6+index_arguments]) && is_number(argv[7+index_arguments]) && is_number(argv[8+index_arguments]) && is_number(argv[9+index_arguments]) && is_number(argv[10+index_arguments]) && is_number(argv[11+index_arguments]) && is_number(argv[12+index_arguments]) && is_number(argv[13+index_arguments]) && is_number(argv[14+index_arguments]) && is_number(argv[15+index_arguments]))
+    {
+        h = atoi(argv[index_arguments++]);
+        w = atoi(argv[index_arguments++]);
+        l = atoi(argv[index_arguments++]);
+        dst_pts = stod(argv[index_arguments++]);
+        dst_lvl = stod(argv[index_arguments++]);
+        low_lvl = stod(argv[index_arguments++]);
+        agv_coord[X] = stod(argv[index_arguments++]);
+        agv_coord[Y] = stod(argv[index_arguments++]);
+        latC = stold(argv[index_arguments++]);
+        lonC = stold(argv[index_arguments++]);
+        d1_coord[X]=stod(argv[index_arguments++]);
+        d1_coord[Y]=stod(argv[index_arguments++]);
+        d1_coord[Z]=stod(argv[index_arguments++]);
+        d2_coord[X]=stod(argv[index_arguments++]);
+        d2_coord[Y]=stod(argv[index_arguments++]);
+        d2_coord[Z]=stod(argv[index_arguments++]);
+    }
     //HELP & ERRORS
     else if(argc==2 && (!((string)argv[1]).compare("--help") || !((string)argv[1]).compare("-h")))
     {
         cout << "This tool generate a 3D map of points, giving height, width and levels, distance between points in meters, lowest level in meters, agv position and targets position. 2 drones are on AGV" << endl << endl;
-        cout << "Usage: ./map_tool [options] <height> <width> <levels> <distance_pts> <distance_lvl> <lowest_lvl> <agv_x> <agv_y> <latC> <lonC> <t1_x t1_y t1_z, t2_x t2_y t2_z ...>" << endl;
+        cout << "Usage: ./map_tool [options] <height> <width> <levels> <distance_pts> <distance_lvl> <lowest_lvl> <agv_x> <agv_y> <latC> <lonC> (<t1_x t1_y t1_z, t2_x t2_y t2_z ...>)or(<d1_x d1_y d1_z, d2_x d2_y d2_z>)" << endl;
         cout << endl;
         cout << "Parameters:" << endl;
         cout << "   <height(pts)> height 2D (y) in points of the map" << endl;
@@ -245,8 +285,10 @@ int main(int argc, char** argv)
         cout << "   <agv_x> <agv_y> position (x,y) of the agv. E.g.: 22.1 23.4" << endl;
         cout << "   <latC> <lonC> latitude and longitude of initial point (double dot value). E.g.: 40.93257 30.27429" << endl;
         cout << "   <t1_x t1_y t1_z, t2_x t2_y t2_z ...> list of target position (x,y,z) of the planning. E.g.: 30.1 40.2 25.1" << endl;
+        cout << "   <d1_x d1_y d1_z, d2_x d2_y d2_z> drones position (x,y,z) for the return to the agv. E.g.: 30.1 40.2 25.1 23.6 45.0 67.3" << endl;
         cout << endl;
         cout << "Options:" << endl;
+        cout << "   --return                           problem file to return drones to agv" << endl;
         cout << "   --pddl <path_to_out_file>          generates a pddl problem as output" << endl;
         cout << "   --links <path_to_out_file>         generates a json file with links as secondary output" << endl;
         cout << "   --json <path_to_out_file>          generates a json file with coordinates as secondary output" << endl;
@@ -288,7 +330,12 @@ int main(int argc, char** argv)
                     out_coordinates += ",";
                 
             }
-    compute_drones_pos(l,h,w, points_agv, points_coord, agv_coord, &agv_pos);
+    if(return_drones)
+    {
+        compute_drone_pos(l, h, w, points, points_coord, d1_coord, &d1_pos);
+        compute_drone_pos(l, h, w, points, points_coord, d2_coord, &d2_pos);
+    }
+    compute_agv_pos(l,h,w, points_agv, points_coord, agv_coord, &agv_pos);
     compute_targets_pos(l,h,w, ntarget, points, points_coord, targets_coord, targets);    
 
     //COMPUTES LINKS & DISTANCES DRONES
@@ -545,24 +592,39 @@ int main(int argc, char** argv)
                 "  )""\n"
                 "  ""\n"
                 "  (:init""\n"
-                "    (= (cost) 0)""\n"
-                "    (agv_pos " << agv_pos << ")""\n\n" << out_empty_pddl << "\n"
-                "    (agv_has d1)\n"
-                "    (agv_has d2)\n";
+                "    (= (cost) 0)""\n";
+        if(!return_drones)
+            pddl_out << "    (agv_has d1)\n"
+                        "    (agv_has d2)\n";
+        else
+            pddl_out << "    (drone_pos d1 "<<d1_pos<<")\n"
+                        "    (drone_pos d2 "<<d2_pos<<")\n";
+
+        pddl_out << "    (agv_pos " << agv_pos << ")""\n\n" << out_empty_pddl << "\n";
         
         pddl_out << out_link_pddl << out_distance_pddl << out_link_agv_pddl << out_distance_agv_pddl;
 
         pddl_out << "  )""\n"
                 "  (:goal""\n";
 
-        if(ntarget==1)
-            pddl_out << "    (picture "<< targets[0] << ")\n";
+        if(!return_drones)
+        {
+            if(ntarget==1)
+                pddl_out << "    (picture "<< targets[0] << ")\n";
+            else
+            {
+                pddl_out << "    (and \n";
+                for(int i=0; i<ntarget; i++)
+                    pddl_out << "      (picture " << targets[i] << ")\n";
+                pddl_out << "    )\n";
+            }
+        }
         else
         {
-            pddl_out << "    (and \n";
-            for(int i=0; i<ntarget; i++)
-                pddl_out << "      (picture " << targets[i] << ")\n";
-            pddl_out << "    )\n";
+            pddl_out << "    (and\n"
+                        "       (agv_has d1)\n"
+                        "       (agv_has d2)\n"
+                        "    )\n";
         }
         
         pddl_out << "  )""\n"

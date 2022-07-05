@@ -1,1 +1,2 @@
-../map_tool --pddl problem.pddl --json points.json 10 10 3 10 20 30 34 21 45.69951042492669 11.374191125479706 50 12 35 100 23 45
+../map_tool --pddl problem.pddl --json points.json --links links.json 10 10 3 10 20 30 34 21 45.69951042492669 11.374191125479706 50 12 35 100 23 45
+../map_tool --return --pddl problem_return.pddl --json points.json --links links.json 10 10 3 10 20 30 34 21 45.69951042492669 11.374191125479706 50 12 35 100 23 45
