@@ -22,6 +22,14 @@ using namespace std;
 #define API_ELEVATION "https://api.open-elevation.com/api/v1/lookup"
 
 
+/************************************
+ * This function returns options from cmd command
+ * 
+ * @param begin Array of arguments
+ * @param end Last element of the array
+ * @param option That has to be found
+ * @return Value of the option if found, otherwise 0
+ ***********************************/
 char* getCmdOption(char ** begin, char ** end, const std::string & option)
 {
     char ** itr = std::find(begin, end, option);
@@ -31,29 +39,66 @@ char* getCmdOption(char ** begin, char ** end, const std::string & option)
     }
     return 0;
 }
+
+/************************************
+ * This function checks if option exists
+ * 
+ * @param begin Array of arguments
+ * @param end Last element of the array
+ * @param option That has to be found
+ * @return True if found, else False
+ ***********************************/
 bool cmdOptionExists(char** begin, char** end, const std::string& option)
 {
     return std::find(begin, end, option) != end;
 }
+
+/************************************
+ * This function checks if a number is integer
+ * 
+ * @param s String to be checked if it's an integer
+ * @return True if int, else False
+ ***********************************/
 bool is_number_int(const string& s)
 {
     string::const_iterator it = s.begin();
     while (it != s.end() && isdigit(*it)) ++it;
     return !s.empty() && it == s.end();
 }
+
+/************************************
+ * This function checks if a string is a number (both decimal or not)
+ * 
+ * @param s String to be checked if it's a number
+ * @return True if number, else False
+ ***********************************/
 bool is_number(const string& s)
 {
     string::const_iterator it = s.begin();
     while (it != s.end() && (isdigit(*it) || *it=='.')) ++it;
     return !s.empty() && it == s.end();
 }
+
+/************************************
+ * This routine are commonly used in program: prompts an error and exit program with value 1
+ ***********************************/
 void common_error()
 {
     cerr << "Wrong usage of this tool. Type --help or -h to see the guide" << endl; 
     exit(1);
 }
 
-
+/************************************
+ * This function projects drone position from a continous space to a point of the discrete map
+ * 
+ * @param l # of levels of map
+ * @param h Height of map in points
+ * @param w Width of map in points
+ * @param points Name of points
+ * @param points_coord Coordinates (x y z) of points ordinated in the same order of points array
+ * @param drone_coord Continous coordinates (x y z) of drone
+ * @param[out] drone_pos String containing name of nearest discrete point from drone position
+ ***********************************/
 void compute_drone_pos(int l, int h, int w, string points[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH], double points_coord[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH][3], double* drone_coord, string* drone_pos)
 {
     double drone_min_value=DBL_MAX;
@@ -69,6 +114,17 @@ void compute_drone_pos(int l, int h, int w, string points[MAX_LEVELS][MAX_HEIGHT
                 }
             }
 }
+/************************************
+ * This function projects agv position from a continous space to an agv point of the discrete map
+ * 
+ * @param l # of levels of map
+ * @param h Height of map in points
+ * @param w Width of map in points
+ * @param points_agv Name of agv points
+ * @param points_coord Coordinates (x y z) of points ordinated in the same order of points array
+ * @param agv_coord Continous coordinates (x y z) of agv
+ * @param[out] agv_pos String containing name of nearest discrete point from agv position
+ ***********************************/
 void compute_agv_pos(int l, int h, int w, string points_agv[MAX_HEIGHT][MAX_WIDTH], double points_coord[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH][3], double* agv_coord, string* agv_pos)
 {
     double agv_min_value=DBL_MAX;
@@ -83,6 +139,17 @@ void compute_agv_pos(int l, int h, int w, string points_agv[MAX_HEIGHT][MAX_WIDT
             }
         }
 }
+/************************************
+ * This function projects target position from a continous space to a point of the discrete map
+ * 
+ * @param l # of levels of map
+ * @param h Height of map in points
+ * @param w Width of map in points
+ * @param points Name of points
+ * @param points_coord Coordinates (x y z) of points ordinated in the same order of points array
+ * @param targets_coord Continous coordinates (x y z) of all targets
+ * @param[out] drone_pos Array of string containing names of all nearest points from targets in the same order
+ ***********************************/
 void compute_targets_pos(int l, int h, int w, int ntarget, string points[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH], double points_coord[MAX_LEVELS][MAX_HEIGHT][MAX_WIDTH][3], double targets_coord[MAX_VISIT_POINTS][3], string targets[MAX_VISIT_POINTS])
 {
     double targets_min_value[MAX_VISIT_POINTS];
@@ -106,7 +173,18 @@ void compute_targets_pos(int l, int h, int w, int ntarget, string points[MAX_LEV
     
 }
 
-//GEOSPATIAL FUNCTIONS
+//! GEOSPATIAL FUNCTIONS
+
+/************************************
+ * This function computes longitude and latitude by adding a long and lat with a distance in meters dx and dy
+ * 
+ * @param latC central latitude
+ * @param lonC central longitude
+ * @param dx x-distance from central latitude in meters
+ * @param dy y-distance from central latitude in meters
+ * @param[out] lat latitude computed
+ * @param[out] lon longitude computed
+ ***********************************/
 void pointAtDistance(long double latC, long double lonC, long double dx, long double dy, long double* lat, long double* lon)
 {
     #define circEq 40075.017
@@ -115,6 +193,14 @@ void pointAtDistance(long double latC, long double lonC, long double dx, long do
     *lon = lonC + (dx * 360 / circEq / 1000 / cos((latC+*lat)*PI/360));
 }
 
+/************************************
+ * This function return minimum elevation of the map
+ * 
+ * @param elevation Array of elevation (MSL) of each point
+ * @param h Height of map in points
+ * @param w Width of map in points
+ * @return Minimum elevation
+ ***********************************/
 int minElevation(int elevation[MAX_HEIGHT][MAX_WIDTH], int h, int w)
 {
     int minValue=100000;
@@ -124,7 +210,16 @@ int minElevation(int elevation[MAX_HEIGHT][MAX_WIDTH], int h, int w)
     return minValue;
 }
 
-//CURL FUNCTIONS
+//! CURL FUNCTIONS
+
+/************************************
+ * This function creates a json string to send to OpenElevation (https://open-elevation.com/)
+ * 
+ * @param lat Latitudes to send
+ * @param lon Longitudes to send ordinated as latitudes
+ * @param arr_length length of two arrays
+ * @return JSON string
+ ***********************************/
 string createJSON(long double lat[], long double lon[], int arr_length)
 {
     string ret="{\"locations\":[";
@@ -136,6 +231,16 @@ string createJSON(long double lat[], long double lon[], int arr_length)
     ret+="]}";
     return ret;
 }
+
+/************************************
+ * This function try to read a json string received from OpenElevation (https://open-elevation.com/)
+ * 
+ * @param buffer string with JSON
+ * @param[out] elevation_out array with elevation of each point
+ * @param arr_length length of original arrays latitude and longitude
+ * @param w Width of map in points
+ * @return 0 without errors
+ ***********************************/
 int readJSON(string buffer, int elevation_out[MAX_HEIGHT][MAX_WIDTH], int arr_length, int w)
 {
     int index = 0, stop=0;
@@ -149,11 +254,26 @@ int readJSON(string buffer, int elevation_out[MAX_HEIGHT][MAX_WIDTH], int arr_le
     }
     return 0;
 }
+
+/************************************
+ * Callback to send a request to OpenElevation (https://open-elevation.com/). Params aren't so important, see https://github.com/Jorl17/open-elevation/blob/master/docs/api.md
+ ***********************************/
 static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
     ((std::string*)userp)->append((char*)contents, size * nmemb);
     return size * nmemb;
 }
+
+/************************************
+ * This function makes a request to get elevation of each agv points of the map and returns them to the main program
+ * 
+ * @param lat Latitudes to send
+ * @param lon Longitudes to send ordinated as latitudes
+ * @param[out] elevation_out array with elevation of each point
+ * @param arr_length length of arrays latitude and longitude
+ * @param w Width of map in points
+ * @return 0 without errors
+ ***********************************/
 int getElevation(long double lat[], long double lon[], int elevation_out[MAX_HEIGHT][MAX_WIDTH], int arr_length, int w)
 {
     CURL *curl;
@@ -187,6 +307,11 @@ int getElevation(long double lat[], long double lon[], int elevation_out[MAX_HEI
     return 0;
 }
 
+//! MAIN PROGRAM
+
+/************************************
+ * This is the main function called by an executor. Type --help or -h in a prompt to look at information about program and parametes input; in alternatives see instructions on readme file or contact me via github
+ ***********************************/
 int main(int argc, char** argv)
 {
     int h, w, l, ntarget=0, index_arguments=1;

@@ -1,2 +1,3 @@
 ../map_tool --pddl problem.pddl --json points.json --links links.json 10 10 3 10 20 30 34 21 45.69951042492669 11.374191125479706 50 12 35 100 23 45
 ../map_tool --return --pddl problem_return.pddl --json points.json --links links.json 10 10 3 10 20 30 34 21 45.69951042492669 11.374191125479706 50 12 35 100 23 45
+curl -X POST https://api.open-elevation.com/api/v1/lookup -H 'Accept: application/json' -H 'Content-Type: application/json' -d '{"locations":[{"latitude": 10,"longitude": 10},{"latitude":20,"longitude": 20},{"latitude":41.161758,	"longitude":-8.583933	}]}'
